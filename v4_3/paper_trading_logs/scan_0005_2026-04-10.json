@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-04-10T17:06:12.960594",
+  "scan_id": 5,
+  "account": {
+    "balance": 9969.89,
+    "equity": 9951.49,
+    "margin_level": 284.01424710391655
+  },
+  "signals": [
+    {
+      "symbol": "EURUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 42.85784840609182,
+      "signal": "SELL",
+      "signal_strength": -0.03571075796954091,
+      "is_strong": false
+    },
+    {
+      "symbol": "GBPUSD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 43.83675287941954,
+      "signal": "SELL",
+      "signal_strength": -0.030816235602902288,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDJPY",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 34.008858624918204,
+      "signal": "SELL",
+      "signal_strength": -0.07995570687540898,
+      "is_strong": false
+    },
+    {
+      "symbol": "AUDUSD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 47.433614382126635,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.012831928089366826,
+      "is_strong": false
+    },
+    {
+      "symbol": "NZDUSD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 61.12922577513113,
+      "signal": "BUY",
+      "signal_strength": 0.05564612887565566,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585038637,
+        "price": 0.58362,
+        "sl": 0.5824285714285715,
+        "tp": 0.5860028571428572
+      }
+    },
+    {
+      "symbol": "USDCHF",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 44.195781036021074,
+      "signal": "SELL",
+      "signal_strength": -0.02902109481989463,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDCAD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 28.02489083445981,
+      "signal": "STRONG_SELL",
+      "signal_strength": -0.10987554582770094,
+      "is_strong": false
+    }
+  ]
+}

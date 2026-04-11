@@ -1,0 +1,24 @@
+{
+  "default_volume": 0.01,
+  "default_sl_points": 50,
+  "default_tp_points": 100,
+  "max_slippage": 20,
+  "magic_number": 234000,
+  "risk_per_trade": 0.01,
+  "max_daily_loss": 0.03,
+  "symbols": {
+    "forex": ["EURUSD", "GBPUSD", "USDJPY", "USDCHF", "AUDUSD", "USDCAD", "NZDUSD"],
+    "crypto": ["BTCUSD", "ETHUSD"],
+    "metals": ["XAUUSD", "XAGUSD"],
+    "indices": ["US30", "NAS100", "SPX500"]
+  },
+  "trading_hours": {
+    "start": "09:00",
+    "end": "17:00",
+    "timezone": "Asia/Shanghai"
+  },
+  "notifications": {
+    "email": true,
+    "feishu": true
+  }
+}

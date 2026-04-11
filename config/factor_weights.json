@@ -1,0 +1,33 @@
+{
+  "factors": {
+    "momentum": 0.20,
+    "mean_reversion": 0.15,
+    "breakout": 0.15,
+    "volatility": 0.10,
+    "trend_strength": 0.15,
+    "volume": 0.10,
+    "support_resistance": 0.10,
+    "sentiment": 0.05
+  },
+  "parameters": {
+    "momentum_period": 20,
+    "rsi_period": 14,
+    "bb_period": 20,
+    "breakout_period": 20,
+    "atr_period": 14,
+    "adx_period": 14,
+    "volume_period": 20,
+    "sr_period": 20
+  },
+  "score_thresholds": {
+    "strong_buy": 70,
+    "buy": 55,
+    "sell": 45,
+    "strong_sell": 30
+  },
+  "ic_thresholds": {
+    "strong": 0.10,
+    "valid": 0.05,
+    "weak": 0.02
+  }
+}

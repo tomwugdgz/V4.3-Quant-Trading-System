@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-03-23T10:34:03.966909",
+  "account": 52797683,
+  "server": "ICMarketsSC-Demo",
+  "currency": "USD",
+  "balance": 10311.71,
+  "equity": 10311.71,
+  "margin": 0.0,
+  "margin_free": 10311.71,
+  "profit": 0.0,
+  "positions_count": 0,
+  "leverage": 5
+}

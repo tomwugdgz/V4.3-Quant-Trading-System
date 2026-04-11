@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-04-10T20:26:21.800213",
+  "scan_id": 15,
+  "account": {
+    "balance": 9957.73,
+    "equity": 9963.18,
+    "margin_level": 498.159
+  },
+  "signals": [
+    {
+      "symbol": "EURUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 44.32894891029352,
+      "signal": "SELL",
+      "signal_strength": -0.028355255448532405,
+      "is_strong": false
+    },
+    {
+      "symbol": "GBPUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 30.20945328689197,
+      "signal": "SELL",
+      "signal_strength": -0.09895273356554014,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDJPY",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 43.377356325377555,
+      "signal": "SELL",
+      "signal_strength": -0.03311321837311223,
+      "is_strong": false
+    },
+    {
+      "symbol": "AUDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 39.31125567093566,
+      "signal": "SELL",
+      "signal_strength": -0.05344372164532171,
+      "is_strong": false
+    },
+    {
+      "symbol": "NZDUSD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 41.737991474168595,
+      "signal": "SELL",
+      "signal_strength": -0.04131004262915702,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDCHF",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 54.82759588004797,
+      "signal": "NEUTRAL",
+      "signal_strength": 0.024137979400239862,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585367482,
+        "price": 0.78852,
+        "sl": 0.789735,
+        "tp": 0.78609
+      }
+    },
+    {
+      "symbol": "USDCAD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 40.54921024802656,
+      "signal": "SELL",
+      "signal_strength": -0.047253948759867194,
+      "is_strong": false
+    }
+  ]
+}

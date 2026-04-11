@@ -1,0 +1,81 @@
+import MetaTrader5 as mt5
+import sys
+
+if not mt5.initialize():
+    print("MT5 initialization failed")
+    sys.exit(1)
+
+# 主要货币对（含日元交叉盘）
+symbols = [
+    # 美元直盘
+    "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
+    # 日元交叉盘
+    "EURJPY", "GBPJPY", "AUDJPY", "NZDJPY", "CADJPY", "CHFJPY"
+]
+
+print("=" * 70)
+print("Market Scan - Finding Best Trading Opportunity")
+print("=" * 70)
+
+best_symbol = None
+best_strength = 0
+best_signal = None
+
+for symbol in symbols:
+    tick = mt5.symbol_info_tick(symbol)
+    if tick and tick.bid > 0:
+        spread = (tick.ask - tick.bid) * 10000  # pips
+        
+        # 获取 H1 数据
+        rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, 10)
+        if rates is not None and len(rates) >= 5:
+            closes = [r['close'] for r in rates[-5:]]
+            avg_close = sum(closes) / len(closes)
+            current = tick.bid
+            
+            # 趋势强度
+            pct_diff = ((current - avg_close) / avg_close) * 100
+            signal = "BUY" if current > avg_close else "SELL"
+            strength = abs(pct_diff)
+            
+            print(f"\n{symbol}:")
+            print(f"  Price: {current:.5f}")
+            print(f"  Spread: {spread:.1f} pips")
+            print(f"  Signal: {signal} (strength: {strength:.3f}%)")
+            
+            # 选择信号最强且点差合理的（优先信号强度！）
+            if spread < 50 and strength > 0.05:  # 点差<50 点，趋势强度>0.05%（铁律）
+                if strength > best_strength:  # ✅ 选信号最强的，不是点差最小的
+                    best_strength = strength
+                    best_symbol = symbol
+                    best_signal = signal
+                    best_price = current
+                    best_spread = spread
+
+print("\n" + "=" * 70)
+if best_symbol:
+    print(f"BEST OPPORTUNITY: {best_symbol}")
+    print(f"  Signal: {best_signal}")
+    print(f"  Price: {best_price:.5f}")
+    print(f"  Spread: {best_spread:.1f} pips")
+    print(f"  Strength: {best_strength:.3f}%")
+    
+    # 计算仓位
+    account = mt5.account_info()
+    risk_amount = account.balance * 0.005  # 0.5% risk
+    stop_loss_pips = 30  # 30 pips SL
+    
+    # 简单计算手数 (假设 USD 计价货币对)
+    pip_value = 0.10  # per 0.01 lot
+    lot_size = round(risk_amount / (stop_loss_pips * pip_value * 10), 2)
+    lot_size = min(lot_size, 1.0)  # max 1 lot
+    
+    print(f"\nPOSITION SIZING:")
+    print(f"  Risk: ${risk_amount:.2f} (0.5% of ${account.balance:.2f})")
+    print(f"  Stop Loss: {stop_loss_pips} pips")
+    print(f"  Lot Size: {lot_size:.2f}")
+else:
+    print("No good opportunity found (spreads too high or no clear trend)")
+    print("Waiting for better conditions...")
+
+mt5.shutdown()

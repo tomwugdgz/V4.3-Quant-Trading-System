@@ -1,0 +1,63 @@
+{
+  "close_time": "2026-03-18T20:52:49.879214",
+  "closed_positions": [
+    {
+      "symbol": "GBPUSD",
+      "volume": 0.1,
+      "profit": -35.2,
+      "ticket": 1537963735,
+      "time": "2026-03-18T20:52:44.838217"
+    },
+    {
+      "symbol": "USDJPY",
+      "volume": 0.14,
+      "profit": -34.17,
+      "ticket": 1537963744,
+      "time": "2026-03-18T20:52:45.800499"
+    },
+    {
+      "symbol": "USDCHF",
+      "volume": 0.1,
+      "profit": -28.71,
+      "ticket": 1537963751,
+      "time": "2026-03-18T20:52:46.401334"
+    },
+    {
+      "symbol": "USDCNH",
+      "volume": 0.26,
+      "profit": -16.76,
+      "ticket": 1537963759,
+      "time": "2026-03-18T20:52:46.975180"
+    },
+    {
+      "symbol": "EURUSD",
+      "volume": 0.68,
+      "profit": -165.92,
+      "ticket": 1537972122,
+      "time": "2026-03-18T20:52:47.530188"
+    },
+    {
+      "symbol": "GBPUSD",
+      "volume": 0.61,
+      "profit": -214.72,
+      "ticket": 1537972169,
+      "time": "2026-03-18T20:52:48.443743"
+    },
+    {
+      "symbol": "USDJPY",
+      "volume": 0.86,
+      "profit": -214.76,
+      "ticket": 1537972171,
+      "time": "2026-03-18T20:52:49.244207"
+    },
+    {
+      "symbol": "USDCNH",
+      "volume": 1.6,
+      "profit": -93.84,
+      "ticket": 1537972176,
+      "time": "2026-03-18T20:52:49.879214"
+    }
+  ],
+  "total_profit": -804.08,
+  "reason": "Stop loss at -70%"
+}

@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-04-11T03:04:37.131999",
+  "scan_id": 4,
+  "account": {
+    "balance": 10022.92,
+    "equity": 10022.92,
+    "margin_level": 0.0
+  },
+  "signals": [
+    {
+      "symbol": "EURUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 36.07272013672472,
+      "signal": "SELL",
+      "signal_strength": -0.0696363993163764,
+      "is_strong": false
+    },
+    {
+      "symbol": "GBPUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 35.30088688544362,
+      "signal": "SELL",
+      "signal_strength": -0.07349556557278192,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDJPY",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 43.66230883973073,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.03168845580134636,
+      "is_strong": false
+    },
+    {
+      "symbol": "AUDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 42.501141332060904,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.03749429333969548,
+      "is_strong": false
+    },
+    {
+      "symbol": "NZDUSD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 49.136701940562304,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.00431649029718848,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDCHF",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 54.048734460564496,
+      "signal": "NEUTRAL",
+      "signal_strength": 0.020243672302822483,
+      "is_strong": true
+    },
+    {
+      "symbol": "USDCAD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 44.57796678669706,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.027110166066514695,
+      "is_strong": false
+    }
+  ]
+}

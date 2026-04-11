@@ -1,0 +1,18 @@
+﻿================================================================================
+TradingAgents-CN 核心 Agent 代码分析
+================================================================================
+
+
+================================================================================
+文件：researchers/bull_researcher.py
+================================================================================
+C:\Users\DELL\AppData\Local\Programs\Python\Python37\python.exe : Traceback (most recent call last):
+所在位置 行:1 字符: 1
++ C:\Users\DELL\AppData\Local\Programs\Python\Python37\python.exe C:\Us ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\DELL\.openclaw-autoclaw\workspace\trading\read_tradingagents.py", line 33, in <module>
+    print('\n'.join(lines))
+UnicodeEncodeError: 'gbk' codec can't encode character '\U0001f402' in position 280: illegal multibyte sequence

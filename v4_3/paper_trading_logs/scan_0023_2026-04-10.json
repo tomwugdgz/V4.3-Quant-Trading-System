@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-04-10T23:06:41.094939",
+  "scan_id": 23,
+  "account": {
+    "balance": 10008.94,
+    "equity": 10027.0,
+    "margin_level": 250.67499999999998
+  },
+  "signals": [
+    {
+      "symbol": "EURUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 42.69990716492514,
+      "signal": "SELL",
+      "signal_strength": -0.03650046417537428,
+      "is_strong": false
+    },
+    {
+      "symbol": "GBPUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 44.431420333963814,
+      "signal": "SELL",
+      "signal_strength": -0.02784289833018093,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDJPY",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 51.3469184280309,
+      "signal": "NEUTRAL",
+      "signal_strength": 0.006734592140154483,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585811202,
+        "price": 159.093,
+        "sl": 159.28799999999998,
+        "tp": 158.70299999999997
+      }
+    },
+    {
+      "symbol": "AUDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 42.37184116509742,
+      "signal": "SELL",
+      "signal_strength": -0.03814079417451289,
+      "is_strong": false
+    },
+    {
+      "symbol": "NZDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 47.4646327013038,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.012676836493481005,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDCHF",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 56.72376281086202,
+      "signal": "BUY",
+      "signal_strength": 0.0336188140543101,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585811224,
+        "price": 0.78849,
+        "sl": 0.78654,
+        "tp": 0.79239
+      }
+    },
+    {
+      "symbol": "USDCAD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 47.85083105112626,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.010745844744368717,
+      "is_strong": false
+    }
+  ]
+}

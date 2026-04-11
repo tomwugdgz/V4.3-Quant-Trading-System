@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-04-10T19:46:20.930746",
+  "scan_id": 13,
+  "account": {
+    "balance": 9958.08,
+    "equity": 9958.08,
+    "margin_level": 0.0
+  },
+  "signals": [
+    {
+      "symbol": "EURUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 43.45989775173492,
+      "signal": "SELL",
+      "signal_strength": -0.03270051124132539,
+      "is_strong": false
+    },
+    {
+      "symbol": "GBPUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 32.64326183625289,
+      "signal": "SELL",
+      "signal_strength": -0.08678369081873555,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDJPY",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 40.23104793159719,
+      "signal": "SELL",
+      "signal_strength": -0.04884476034201406,
+      "is_strong": false
+    },
+    {
+      "symbol": "AUDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 42.54407814113938,
+      "signal": "SELL",
+      "signal_strength": -0.0372796092943031,
+      "is_strong": false
+    },
+    {
+      "symbol": "NZDUSD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 47.07818610645473,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.01460906946772635,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDCHF",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 50.32573103066638,
+      "signal": "NEUTRAL",
+      "signal_strength": 0.0016286551533319126,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585293382,
+        "price": 0.78896,
+        "sl": 0.7902757142857143,
+        "tp": 0.7863285714285714
+      }
+    },
+    {
+      "symbol": "USDCAD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 34.76358207728519,
+      "signal": "SELL",
+      "signal_strength": -0.07618208961357403,
+      "is_strong": false
+    }
+  ]
+}

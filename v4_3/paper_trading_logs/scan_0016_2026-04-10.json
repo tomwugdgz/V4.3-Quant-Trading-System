@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-04-10T20:46:22.761632",
+  "scan_id": 16,
+  "account": {
+    "balance": 9957.38,
+    "equity": 9966.76,
+    "margin_level": 249.169
+  },
+  "signals": [
+    {
+      "symbol": "EURUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 46.10804121909017,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.019459793904549157,
+      "is_strong": false
+    },
+    {
+      "symbol": "GBPUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 31.119324589858152,
+      "signal": "SELL",
+      "signal_strength": -0.09440337705070924,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDJPY",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 48.854044410827385,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.005729777945863077,
+      "is_strong": false
+    },
+    {
+      "symbol": "AUDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 38.41785580380089,
+      "signal": "SELL",
+      "signal_strength": -0.05791072098099555,
+      "is_strong": false
+    },
+    {
+      "symbol": "NZDUSD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 49.75653222011873,
+      "signal": "NEUTRAL",
+      "signal_strength": -0.0012173388994063572,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDCHF",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 67.1570674715303,
+      "signal": "BUY",
+      "signal_strength": 0.08578533735765148,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585436643,
+        "price": 0.78837,
+        "sl": 0.7870317857142857,
+        "tp": 0.7910464285714286
+      }
+    },
+    {
+      "symbol": "USDCAD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 50.60979938970291,
+      "signal": "NEUTRAL",
+      "signal_strength": 0.003048996948514535,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585436688,
+        "price": 1.38214,
+        "sl": 1.3834107142857142,
+        "tp": 1.3795985714285715
+      }
+    }
+  ]
+}

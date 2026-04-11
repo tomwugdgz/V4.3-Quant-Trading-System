@@ -1,0 +1,187 @@
+{
+  "schema": "strategy-status/v1",
+  "last_updated": "2026-03-27T00:30:00+08:00",
+  "strategies": {
+    "v1.0": {
+      "name": "SMA 趋势跟踪",
+      "description": "SMA20/SMA50 交叉趋势跟踪",
+      "status": "ACTIVE",
+      "status_reason": "作为基准策略继续使用",
+      "created_date": "2026-03-17",
+      "parameters": {
+        "signal_threshold": 0,
+        "position_size": "0.01 手固定",
+        "stop_loss_pips": 30,
+        "take_profit_pips": 60
+      },
+      "performance": {
+        "total_trades": 1,
+        "win_rate": 0,
+        "total_pnl": -2.18,
+        "max_drawdown": -2.18,
+        "profit_factor": 0,
+        "sharpe_ratio": null
+      },
+      "quality_gate": {
+        "win_rate": "FAIL",
+        "profit_factor": "FAIL",
+        "max_drawdown": "PASS",
+        "trade_count": "FAIL"
+      }
+    },
+    "v2.0": {
+      "name": "四重确认策略",
+      "description": "AMA + RSRS + ADX + 标准差四重确认",
+      "status": "OPTIMIZING",
+      "status_reason": "信号门槛过高，交易频率不足",
+      "created_date": "2026-03-19",
+      "parameters": {
+        "signal_threshold": 0.001,
+        "position_size": "0.5% 风险",
+        "stop_loss_pips": 30,
+        "take_profit_pips": 60,
+        "adx_min": 25,
+        "rsrs_min": 0.8
+      },
+      "performance": {
+        "total_trades": 1,
+        "win_rate": null,
+        "total_pnl": 211.28,
+        "max_drawdown": -0.35,
+        "profit_factor": null,
+        "sharpe_ratio": null
+      },
+      "quality_gate": {
+        "win_rate": "PENDING",
+        "profit_factor": "PENDING",
+        "max_drawdown": "PASS",
+        "trade_count": "FAIL"
+      }
+    },
+    "v2.1": {
+      "name": "信号门槛优化",
+      "description": "增加>0.1% 信号强度过滤",
+      "status": "STOPPED",
+      "status_reason": "交易频率太低，无法积累足够数据",
+      "created_date": "2026-03-23",
+      "stopped_date": "2026-03-27",
+      "parameters": {
+        "signal_threshold": 0.001,
+        "position_size": "0.5% 风险",
+        "cooldown_minutes": 30,
+        "weekend_threshold": 0.002
+      },
+      "performance": {
+        "total_trades": 0,
+        "win_rate": null,
+        "total_pnl": 0,
+        "max_drawdown": 0,
+        "profit_factor": null,
+        "sharpe_ratio": null
+      },
+      "quality_gate": {
+        "win_rate": "N/A",
+        "profit_factor": "N/A",
+        "max_drawdown": "PASS",
+        "trade_count": "FAIL"
+      }
+    },
+    "v2.2": {
+      "name": "轻仓测试版",
+      "description": "四重确认 + 降低门槛至 0.05% + 轻仓",
+      "status": "ACTIVE",
+      "status_reason": "已执行首单，信号强度 0.289%",
+      "created_date": "2026-03-27",
+      "test_start": "2026-03-27",
+      "test_end": "2026-04-27",
+      "first_trade": {
+        "date": "2026-03-27T00:41",
+        "symbol": "AUDUSD",
+        "direction": "SELL",
+        "signal_strength": 0.00289,
+        "order_id": 1558867138
+      },
+      "parameters": {
+        "signal_threshold": 0.0005,
+        "position_size": "0.1-0.2% 风险",
+        "stop_loss_pips": 30,
+        "take_profit_pips": 60,
+        "adx_min": 25,
+        "rsrs_min": 0.8
+      },
+      "performance": {
+        "total_trades": 0,
+        "win_rate": null,
+        "total_pnl": 0,
+        "max_drawdown": 0,
+        "profit_factor": null,
+        "sharpe_ratio": null
+      },
+      "quality_gate": {
+        "win_rate": "PENDING",
+        "profit_factor": "PENDING",
+        "max_drawdown": "PENDING",
+        "trade_count": "PENDING"
+      }
+    }
+  },
+  "quality_gate_rules": {
+    "win_rate": {
+      "pass": 0.45,
+      "warning": 0.35,
+      "fail": 0.35
+    },
+    "profit_factor": {
+      "pass": 1.5,
+      "warning": 1.0,
+      "fail": 1.0
+    },
+    "max_drawdown": {
+      "pass": 0.10,
+      "warning": 0.15,
+      "fail": 0.15
+    },
+    "sharpe_ratio": {
+      "pass": 1.0,
+      "warning": 0.5,
+      "fail": 0.5
+    },
+    "trade_count_monthly": {
+      "pass": 20,
+      "warning": 10,
+      "fail": 10
+    },
+    "profit_loss_ratio": {
+      "pass": 1.5,
+      "warning": 1.0,
+      "fail": 1.0
+    }
+  },
+  "auto_risk_control": {
+    "consecutive_losses": {
+      "threshold": 5,
+      "action": "SET_OPTIMIZING"
+    },
+    "daily_loss": {
+      "threshold": 0.03,
+      "action": "PAUSE_24H"
+    },
+    "weekly_loss": {
+      "threshold": 0.05,
+      "action": "SET_OPTIMIZING"
+    },
+    "monthly_loss": {
+      "threshold": 0.10,
+      "action": "SET_STOPPED"
+    },
+    "margin_level": {
+      "threshold": 2.0,
+      "action": "PAUSE_NEW_POSITIONS"
+    }
+  },
+  "next_review": {
+    "short_term": "2026-04-03",
+    "mid_term": "2026-04-27",
+    "long_term": "2026-06-27"
+  }
+}

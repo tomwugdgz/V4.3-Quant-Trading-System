@@ -1,0 +1,66 @@
+{
+  "account": {
+    "type": "paper_trading",
+    "broker": "ICMarketsSC-Demo",
+    "account_number": "52797683",
+    "initial_capital": 10000,
+    "currency": "USD",
+    "leverage": 5,
+    "timezone": "Asia/Shanghai"
+  },
+  "risk": {
+    "account": {
+      "min_margin_level": 200,
+      "max_leverage": 3.0,
+      "max_daily_loss_percent": 0.03,
+      "max_total_drawdown_percent": 0.10
+    },
+    "position": {
+      "max_positions": 3,
+      "max_same_symbol": 2,
+      "max_total_risk_percent": 0.03,
+      "risk_per_trade_percent": 0.005
+    },
+    "stop_loss": {
+      "atr_multiplier": 1.5,
+      "min_points": 20
+    },
+    "var": {
+      "confidence_level": 0.95,
+      "max_var_percent": 0.02
+    }
+  },
+  "trading": {
+    "symbols": [
+      "EURUSD",
+      "GBPUSD",
+      "USDJPY",
+      "AUDUSD",
+      "NZDUSD",
+      "USDCHF",
+      "USDCAD"
+    ],
+    "timeframe": "H1",
+    "scan_interval_minutes": 60,
+    "signal_threshold": 0.001,
+    "min_reward_risk_ratio": 1.5,
+    "max_hold_days": 3
+  },
+  "monitoring": {
+    "daily_check_time": "17:00",
+    "daily_report_time": "20:00",
+    "weekly_report_day": "Sunday",
+    "weekly_report_time": "20:00",
+    "alert_channels": ["feishu"],
+    "log_level": "INFO",
+    "log_file": "logs/paper_trading.log"
+  },
+  "acceptance_criteria": {
+    "min_trades": 10,
+    "min_win_rate": 0.50,
+    "min_reward_risk_ratio": 1.5,
+    "max_drawdown": 0.05,
+    "risk_violations": 0,
+    "system_stability": "no_crash"
+  }
+}

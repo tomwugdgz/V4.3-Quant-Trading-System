@@ -1,0 +1,102 @@
+{
+  "timestamp": "2026-04-10T22:26:36.173001",
+  "scan_id": 21,
+  "account": {
+    "balance": 9967.71,
+    "equity": 9953.8,
+    "margin_level": 248.84499999999997
+  },
+  "signals": [
+    {
+      "symbol": "EURUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 42.68237699070926,
+      "signal": "SELL",
+      "signal_strength": -0.036588115046453706,
+      "is_strong": false
+    },
+    {
+      "symbol": "GBPUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 41.624627158400244,
+      "signal": "SELL",
+      "signal_strength": -0.04187686420799878,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDJPY",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 53.554992095879825,
+      "signal": "NEUTRAL",
+      "signal_strength": 0.017774960479399127,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585697971,
+        "price": 159.108,
+        "sl": 159.31253571428573,
+        "tp": 158.69892857142858
+      }
+    },
+    {
+      "symbol": "AUDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 40.322914888149285,
+      "signal": "SELL",
+      "signal_strength": -0.04838542555925358,
+      "is_strong": false
+    },
+    {
+      "symbol": "NZDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 43.296026745327424,
+      "signal": "SELL",
+      "signal_strength": -0.033519866273362876,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDCHF",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 62.771691372145696,
+      "signal": "BUY",
+      "signal_strength": 0.06385845686072848,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585698011,
+        "price": 0.7858,
+        "sl": 0.7841607142857143,
+        "tp": 0.7890785714285715
+      }
+    },
+    {
+      "symbol": "USDCAD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 65.09810043657858,
+      "signal": "BUY",
+      "signal_strength": 0.07549050218289288,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": false,
+        "message": "下单失败：No money",
+        "retcode": 10019
+      }
+    }
+  ]
+}

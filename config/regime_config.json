@@ -1,0 +1,24 @@
+{
+  "adx_threshold": 25,
+  "adx_low_threshold": 20,
+  "atr_multiplier": 1.5,
+  "atr_period": 14,
+  "bb_period": 20,
+  "bb_std": 2.0,
+  "ema_fast": 10,
+  "ema_slow": 20,
+  "dynamic_thresholds": {
+    "TRENDING_UP": 0.08,
+    "TRENDING_DOWN": 0.08,
+    "RANGING": 0.15,
+    "HIGH_VOLATILITY": 0.20,
+    "UNKNOWN": 0.10
+  },
+  "position_multipliers": {
+    "TRENDING_UP": 1.0,
+    "TRENDING_DOWN": 1.0,
+    "RANGING": 0.5,
+    "HIGH_VOLATILITY": 0.3,
+    "UNKNOWN": 0.5
+  }
+}

@@ -1,0 +1,56 @@
+[
+  {
+    "symbol": "EURUSD",
+    "direction": "BUY",
+    "volume": 0.08,
+    "price": 1.15139,
+    "sl": 1.14587,
+    "tp": 1.16059,
+    "status": "OK"
+  },
+  {
+    "symbol": "GBPUSD",
+    "direction": "BUY",
+    "volume": 0.08,
+    "price": 1.33277,
+    "sl": 1.32677,
+    "tp": 1.34277,
+    "status": "OK"
+  },
+  {
+    "symbol": "USDJPY",
+    "direction": "SELL",
+    "volume": 0.01,
+    "price": 159.023,
+    "sl": 159.58443,
+    "tp": 158.08728,
+    "status": "OK"
+  },
+  {
+    "symbol": "USDCHF",
+    "direction": "BUY",
+    "volume": 0.11,
+    "price": 0.78729,
+    "sl": 0.78315,
+    "tp": 0.79419,
+    "status": "OK"
+  },
+  {
+    "symbol": "AUDUSD",
+    "direction": "BUY",
+    "volume": 0.09,
+    "price": 0.70915,
+    "sl": 0.70419,
+    "tp": 0.71739,
+    "status": "OK"
+  },
+  {
+    "symbol": "USDCAD",
+    "direction": "SELL",
+    "volume": 0.12,
+    "price": 1.37055,
+    "sl": 1.37448,
+    "tp": 1.364,
+    "status": "OK"
+  }
+]

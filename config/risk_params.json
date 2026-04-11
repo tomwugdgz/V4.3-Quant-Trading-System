@@ -1,0 +1,22 @@
+{
+  "max_leverage": 3.0,
+  "min_margin_level": 200,
+  "max_daily_loss_percent": 0.03,
+  "max_total_risk": 0.03,
+  "max_positions": 3,
+  "max_position_per_symbol": 1,
+  "var_confidence": 0.95,
+  "var_lookback_days": 30,
+  "position_sizing": {
+    "risk_per_trade": 0.005,
+    "stop_loss_atr_multiplier": 1.5,
+    "min_volume": 0.01,
+    "max_volume": 5.0
+  },
+  "correlation_groups": {
+    "usd_bull": ["EURUSD", "GBPUSD", "AUDUSD", "NZDUSD"],
+    "usd_bear": ["USDJPY", "USDCHF", "USDCAD"],
+    "commodity": ["AUDUSD", "NZDUSD", "USDCAD"],
+    "safe_haven": ["USDJPY", "CHFJPY", "XAUUSD"]
+  }
+}

@@ -1,0 +1,217 @@
+{
+  "test_config": {
+    "initial_capital": 10000,
+    "risk_per_trade": 0.001,
+    "stop_loss_pips": 30,
+    "take_profit_pips": 60,
+    "test_start": "2026-03-27",
+    "test_end": "2026-04-03"
+  },
+  "algorithms": {
+    "TF-01": {
+      "name": "SMA 交叉",
+      "type": "trend",
+      "params": {
+        "fast_period": 20,
+        "slow_period": 50,
+        "signal_threshold": 0.0005
+      }
+    },
+    "TF-02": {
+      "name": "EMA 交叉",
+      "type": "trend",
+      "params": {
+        "fast_period": 12,
+        "slow_period": 26,
+        "signal_threshold": 0.0005
+      }
+    },
+    "TF-03": {
+      "name": "MACD 趋势",
+      "type": "trend",
+      "params": {
+        "fast_period": 12,
+        "slow_period": 26,
+        "signal_period": 9,
+        "signal_threshold": 0.0005
+      }
+    },
+    "TF-04": {
+      "name": "ADX 趋势",
+      "type": "trend",
+      "params": {
+        "adx_threshold": 25,
+        "di_period": 14,
+        "signal_threshold": 0.0005
+      }
+    },
+    "TF-05": {
+      "name": "通道突破",
+      "type": "trend",
+      "params": {
+        "channel_period": 20,
+        "signal_threshold": 0.0005
+      }
+    },
+    "TF-06": {
+      "name": "自适应均线",
+      "type": "trend",
+      "params": {
+        "ama_fast": 2,
+        "ama_slow": 30,
+        "signal_threshold": 0.0005
+      }
+    }
+  },
+  "results": {
+    "TF-01": {
+      "name": "SMA 交叉",
+      "capital": 10050.0,
+      "trades": [
+        {
+          "date": "2026-03-27",
+          "symbol": "EURUSD",
+          "direction": "SELL",
+          "profit": 50.0
+        }
+      ],
+      "winning_trades": 1,
+      "losing_trades": 0,
+      "total_profit": 50.0,
+      "total_loss": 0,
+      "max_drawdown": 0,
+      "current_drawdown": 0,
+      "status": "ACTIVE"
+    },
+    "TF-02": {
+      "name": "EMA 交叉",
+      "capital": 9970.0,
+      "trades": [
+        {
+          "date": "2026-03-27",
+          "symbol": "GBPUSD",
+          "direction": "BUY",
+          "profit": -30.0
+        }
+      ],
+      "winning_trades": 0,
+      "losing_trades": 1,
+      "total_profit": 0,
+      "total_loss": 30.0,
+      "max_drawdown": 30.0,
+      "current_drawdown": 30.0,
+      "status": "ACTIVE"
+    },
+    "TF-03": {
+      "name": "MACD 趋势",
+      "capital": 10000,
+      "trades": [],
+      "winning_trades": 0,
+      "losing_trades": 0,
+      "total_profit": 0,
+      "total_loss": 0,
+      "max_drawdown": 0,
+      "current_drawdown": 0,
+      "status": "ACTIVE"
+    },
+    "TF-04": {
+      "name": "ADX 趋势",
+      "capital": 10000,
+      "trades": [],
+      "winning_trades": 0,
+      "losing_trades": 0,
+      "total_profit": 0,
+      "total_loss": 0,
+      "max_drawdown": 0,
+      "current_drawdown": 0,
+      "status": "ACTIVE"
+    },
+    "TF-05": {
+      "name": "通道突破",
+      "capital": 10000,
+      "trades": [],
+      "winning_trades": 0,
+      "losing_trades": 0,
+      "total_profit": 0,
+      "total_loss": 0,
+      "max_drawdown": 0,
+      "current_drawdown": 0,
+      "status": "ACTIVE"
+    },
+    "TF-06": {
+      "name": "自适应均线",
+      "capital": 10000.0,
+      "trades": [
+        {
+          "date": "2026-03-27",
+          "symbol": "AUDUSD",
+          "direction": "SELL",
+          "profit": 0.0
+        }
+      ],
+      "winning_trades": 0,
+      "losing_trades": 1,
+      "total_profit": 0,
+      "total_loss": 0.0,
+      "max_drawdown": 0,
+      "current_drawdown": 0,
+      "status": "ACTIVE"
+    }
+  },
+  "kpi": {
+    "TF-01": {
+      "total_trades": 1,
+      "win_rate": 1.0,
+      "roi": 0.005,
+      "profit_factor": Infinity,
+      "max_drawdown": 0.0,
+      "sharpe_ratio": 0.049999999999999996,
+      "score": 66.625
+    },
+    "TF-02": {
+      "total_trades": 1,
+      "win_rate": 0.0,
+      "roi": -0.003,
+      "profit_factor": 0.0,
+      "max_drawdown": 0.003,
+      "sharpe_ratio": 0,
+      "score": 20.380000000000003
+    },
+    "TF-03": {
+      "total_trades": 0,
+      "win_rate": 0,
+      "roi": 0,
+      "profit_factor": 0,
+      "max_drawdown": 0,
+      "sharpe_ratio": 0,
+      "score": 0
+    },
+    "TF-04": {
+      "total_trades": 0,
+      "win_rate": 0,
+      "roi": 0,
+      "profit_factor": 0,
+      "max_drawdown": 0,
+      "sharpe_ratio": 0,
+      "score": 0
+    },
+    "TF-05": {
+      "total_trades": 0,
+      "win_rate": 0,
+      "roi": 0,
+      "profit_factor": 0,
+      "max_drawdown": 0,
+      "sharpe_ratio": 0,
+      "score": 0
+    },
+    "TF-06": {
+      "total_trades": 1,
+      "win_rate": 0.0,
+      "roi": 0.0,
+      "profit_factor": Infinity,
+      "max_drawdown": 0.0,
+      "sharpe_ratio": 0,
+      "score": 50.5
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "timestamp": "2026-04-10T22:06:34.618468",
+  "scan_id": 20,
+  "account": {
+    "balance": 9968.41,
+    "equity": 9968.41,
+    "margin_level": 0.0
+  },
+  "signals": [
+    {
+      "symbol": "EURUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 43.56891105585183,
+      "signal": "SELL",
+      "signal_strength": -0.03215544472074086,
+      "is_strong": false
+    },
+    {
+      "symbol": "GBPUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 42.91242326683482,
+      "signal": "SELL",
+      "signal_strength": -0.03543788366582589,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDJPY",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 40.42565003343218,
+      "signal": "SELL",
+      "signal_strength": -0.047871749832839115,
+      "is_strong": false
+    },
+    {
+      "symbol": "AUDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 41.7960642700749,
+      "signal": "SELL",
+      "signal_strength": -0.041019678649625496,
+      "is_strong": false
+    },
+    {
+      "symbol": "NZDUSD",
+      "regime": "TRENDING_UP",
+      "threshold": 0.08,
+      "score": 43.4486404949075,
+      "signal": "SELL",
+      "signal_strength": -0.0327567975254625,
+      "is_strong": false
+    },
+    {
+      "symbol": "USDCHF",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 62.70429987340958,
+      "signal": "BUY",
+      "signal_strength": 0.06352149936704791,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585633150,
+        "price": 0.78644,
+        "sl": 0.7848692857142857,
+        "tp": 0.7895814285714287
+      }
+    },
+    {
+      "symbol": "USDCAD",
+      "regime": "TRENDING_DOWN",
+      "threshold": 0.08,
+      "score": 59.78835894481969,
+      "signal": "BUY",
+      "signal_strength": 0.04894179472409846,
+      "is_strong": true,
+      "risk_passed": true,
+      "suggested_volume": 0.1,
+      "trade_executed": true,
+      "trade_result": {
+        "success": true,
+        "order_id": 1585633187,
+        "price": 1.38095,
+        "sl": 1.3794746428571427,
+        "tp": 1.383900714285714
+      }
+    }
+  ]
+}
