@@ -1,0 +1,137 @@
+{
+  "_comment": "旺财交易系统核心配置层 - 所有参数的基础来源",
+  "_version": "v2.0",
+  "_last_updated": "2026-05-07",
+  "_进化路径": "D:\\LLM-Wiki\\进化\\",
+
+  "account": {
+    "id": 52797683,
+    "server": "ICMarketsSC-Demo"
+  },
+
+  "symbols": {
+    "straight": {
+      "label": "直盘",
+      "symbols": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD"],
+      "trade_hours": "24h",
+      "weekend_allowed": false
+    },
+    "cross": {
+      "label": "交叉盘",
+      "symbols": ["EURJPY", "AUDJPY", "EURGBP", "EURCAD", "GBPAUD", "GBPJPY", "EURAUD", "AUDCAD", "AUDCHF", "NZDJPY", "CADJPY", "CHFJPY"],
+      "trade_hours": "24h",
+      "weekend_allowed": false
+    },
+    "metals": {
+      "label": "贵金属",
+      "symbols": ["XAUUSD", "XAGUSD"],
+      "trade_hours": "24h",
+      "weekend_allowed": false
+    }
+  },
+
+  "strategies": {
+    "trend_following": {
+      "label": "趋势跟踪",
+      "enabled": true,
+      "params": {
+        "ema_fast": 12,
+        "ema_slow": 26,
+        "adx_threshold": 20,
+        "atr_sl_mult": 1.5,
+        "atr_tp_mult": 3.0
+      }
+    },
+    "mean_reversion": {
+      "label": "均值回归",
+      "enabled": true,
+      "params": {
+        "rsi_period": 14,
+        "rsi_oversold": 25,
+        "rsi_overbought": 75,
+        "bb_period": 20,
+        "bb_std": 2.5,
+        "bb_touch_threshold": 0.05
+      }
+    },
+    "breakout": {
+      "label": "突破",
+      "enabled": false,
+      "params": {
+        "lookback_days": 1,
+        "volume_mult": 1.5
+      }
+    },
+    "session_based": {
+      "label": "时段感知",
+      "enabled": true,
+      "params": {
+        "asian_session": {"start": 2, "end": 10, "volatility_mult": 0.8},
+        "london_session": {"start": 10, "end": 18, "volatility_mult": 1.2},
+        "ny_session": {"start": 18, "end": 2, "volatility_mult": 1.5}
+      }
+    }
+  },
+
+  "symbol_strategy_map": {
+    "EURUSD": {"primary": "trend_following", "secondary": "mean_reversion"},
+    "GBPUSD": {"primary": "trend_following", "secondary": "mean_reversion"},
+    "USDJPY": {"primary": "mean_reversion", "secondary": "trend_following"},
+    "AUDUSD": {"primary": "trend_following", "secondary": "session_based"},
+    "USDCAD": {"primary": "trend_following", "secondary": "mean_reversion"},
+    "USDCHF": {"primary": "mean_reversion", "secondary": "trend_following"},
+    "NZDUSD": {"primary": "mean_reversion", "secondary": "session_based"},
+    "EURJPY": {"primary": "trend_following", "secondary": "session_based"},
+    "AUDJPY": {"primary": "mean_reversion", "secondary": "session_based"},
+    "EURGBP": {"primary": "trend_following", "secondary": "mean_reversion"},
+    "EURCAD": {"primary": "trend_following", "secondary": "mean_reversion"},
+    "GBPAUD": {"primary": "trend_following", "secondary": "breakout"},
+    "GBPJPY": {"primary": "mean_reversion", "secondary": "session_based"},
+    "EURAUD": {"primary": "trend_following", "secondary": "mean_reversion"},
+    "AUDCAD": {"primary": "trend_following", "secondary": "mean_reversion"},
+    "AUDCHF": {"primary": "mean_reversion", "secondary": "session_based"},
+    "NZDJPY": {"primary": "mean_reversion", "secondary": "session_based"},
+    "CADJPY": {"primary": "mean_reversion", "secondary": "session_based"},
+    "CHFJPY": {"primary": "mean_reversion", "secondary": "session_based"},
+    "XAUUSD": {"primary": "trend_following", "secondary": "session_based"},
+    "XAGUSD": {"primary": "trend_following", "secondary": "mean_reversion"}
+  },
+
+  "risk": {
+    "base_risk_per_trade": 0.005,
+    "max_positions": 3,
+    "max_lot_per_trade": 0.15,
+    "max_leverage": 3.0,
+    "min_margin_level": 200,
+    "daily_loss_limit": 0.03,
+    "position_timeout_hours": 8
+  },
+
+  "execution": {
+    "scan_interval_seconds": 300,
+    "cooldown_minutes": 30,
+    "max_spread": {
+      "EURUSD": 2.0,
+      "GBPUSD": 3.0,
+      "USDJPY": 2.5,
+      "AUDUSD": 2.5,
+      "USDCAD": 3.0,
+      "USDCHF": 3.0,
+      "NZDUSD": 3.5,
+      "XAUUSD": 3.0,
+      "XAGUSD": 3.0,
+      "default": 4.0
+    }
+  },
+
+  "exposure_groups": {
+    "usd_bull": {"symbols": ["EURUSD", "GBPUSD", "AUDUSD", "NZDUSD"], "max_pct": 30},
+    "usd_bear": {"symbols": ["USDJPY", "USDCAD", "USDCHF"], "max_pct": 40},
+    "metals": {"symbols": ["XAUUSD", "XAGUSD"], "max_pct": 50}
+  },
+
+  "filters": {
+    "weekend_no_trade": true,
+    "timeout_close_enabled": true
+  }
+}

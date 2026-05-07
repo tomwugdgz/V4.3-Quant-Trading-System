@@ -1,0 +1,117 @@
+{
+  "_comment": "旺财进化系统参数持久化文件 - 存储所有经过进化产生的参数变更",
+  "_version": "v1",
+  "_last_updated": "2026-05-07",
+  "_进化文件": "D:\\LLM-Wiki\\进化\\",
+  "_当前策略": "D:\\LLM-Wiki\\旺财-当前策略.md",
+
+  "strategies": {
+    "mean_reversion": {
+      "rsi_oversold": 25,
+      "rsi_overbought": 75,
+      "bb_std": 2.5
+    },
+    "trend_following": {
+      "adx_threshold": 20,
+      "atr_sl_mult": 1.5
+    },
+    "_evolution_log": [
+      {"date": "2026-05-07", "change": "Initial v1 params from patrol.py V3 signal"}
+    ]
+  },
+
+  "symbol_block": {
+    "_comment": "品种黑名单",
+    "NZDUSD": {"blocked": true, "reason": "13连亏", "blocked_date": "2026-05-02"},
+    "XAUUSD": {"blocked": false, "reason": "", "blocked_date": null}
+  },
+
+  "symbol_overrides": {
+    "_comment": "品种专属参数覆盖",
+    "USDJPY": {
+      "atr_sl_mult": 2.5,
+      "min_sl_pips": 25,
+      "volatility_threshold": 0.25,
+      "signal_threshold_mult": 1.0
+    },
+    "AUDJPY": {
+      "atr_sl_mult": 2.5,
+      "min_sl_pips": 25,
+      "volatility_threshold": 0.25,
+      "signal_threshold_mult": 1.0
+    },
+    "EURJPY": {
+      "atr_sl_mult": 2.0,
+      "min_sl_pips": 20,
+      "volatility_threshold": 0.20,
+      "signal_threshold_mult": 1.0
+    },
+    "GBPJPY": {
+      "atr_sl_mult": 2.0,
+      "min_sl_pips": 20,
+      "volatility_threshold": 0.20,
+      "signal_threshold_mult": 1.0
+    },
+    "NZDJPY": {
+      "atr_sl_mult": 2.5,
+      "min_sl_pips": 25,
+      "volatility_threshold": 0.25,
+      "signal_threshold_mult": 1.0
+    },
+    "CADJPY": {
+      "atr_sl_mult": 2.0,
+      "min_sl_pips": 20,
+      "volatility_threshold": 0.20,
+      "signal_threshold_mult": 1.0
+    },
+    "CHFJPY": {
+      "atr_sl_mult": 2.0,
+      "min_sl_pips": 20,
+      "volatility_threshold": 0.20,
+      "signal_threshold_mult": 1.0
+    },
+    "XAUUSD": {
+      "atr_sl_mult": 2.0,
+      "signal_threshold": 0.20,
+      "volatility_threshold": 0.30
+    },
+    "XAGUSD": {
+      "atr_sl_mult": 2.0,
+      "signal_threshold": 0.20,
+      "volatility_threshold": 0.30
+    }
+  },
+
+  "risk_overrides": {
+    "_comment": "风险参数覆盖",
+    "base": {
+      "risk_per_trade": 0.005,
+      "cooldown_minutes": 30
+    },
+    "XAUUSD": {
+      "risk_per_trade": 0.005,
+      "cooldown_minutes": 30
+    }
+  },
+
+  "execution_overrides": {
+    "_comment": "执行参数覆盖",
+    "scan_interval_seconds": 300,
+    "cooldown_minutes": 30
+  },
+
+  "evolution_history": [
+    {
+      "id": "v1",
+      "date": "2026-05-06",
+      "trigger": "JPY 品种亏损 -$64.66",
+      "changes": {
+        "USDJPY": {"atr_sl_mult": 2.5, "min_sl_pips": 25},
+        "AUDJPY": {"atr_sl_mult": 2.5, "min_sl_pips": 25},
+        "EURJPY": {"atr_sl_mult": 2.0, "min_sl_pips": 20}
+      },
+      "backtest_result": "v0基准: 75笔 +$62.56, JPY -$64.66",
+      "forward_test_date": "2026-05-13"
+    }
+  ]
+}

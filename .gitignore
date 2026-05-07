@@ -86,3 +86,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# LLM Wiki (本地知识库路径，不同步)
+# 知识库在 D:\LLM-Wiki\，这是一个独立路径
