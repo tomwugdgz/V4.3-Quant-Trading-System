@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 30分钟巡查 + 自动开仓 — ATR动态止损版
@@ -16,7 +16,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='repla
 ACCOUNT = 52797683
 SERVER = "ICMarketsSC-Demo"
 THRESHOLD = 0.15        # 信号强度门槛 %
-MAX_POS = 3
+MAX_POS = 5              # 最多持仓数
 RISK_PCT = 0.005       # 0.5% 单笔风险
 MAX_LOTS_STRONG = 0.15  # 强信号最大仓位
 
