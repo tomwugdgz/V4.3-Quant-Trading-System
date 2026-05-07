@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-自动监控系统 V3.1 — 2026-04-26 重构 / 2026-05-02 优化版
+自动监控系统 V3.0 — 2026-04-26 重构版
 修复清单:
   P0 仓位计算 — pip value 动态获取（非硬编码）
   P0 JPY 止损 — 按 digits 自动判断除数
@@ -28,12 +28,8 @@ import msvcrt
 from datetime import datetime, timedelta
 from pathlib import Path
 
-# 强制 UTF-8 输出 (仅当有 buffer 时)
-if hasattr(sys.stdout, 'buffer'):
-    try:
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    except (AttributeError, ValueError):
-        pass
+# 强制 UTF-8 输出
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 # 路径
 BASE_DIR = Path(__file__).parent
@@ -48,9 +44,8 @@ RISK_PERCENT = 0.005           # 0.5% 单笔风险
 MIN_SIGNAL_STRENGTH = 0.15     # 信号强度门槛 (%)
 PROFIT_THRESHOLD_PIPS = 10     # 盈利达标平仓
 COOLDOWN_MINUTES = 30          # 冷却期
-# 幽灵规则修复 (2026-04-27): 取消日限，不设交易上限
-# MAX_TRADES_PER_SYMBOL_PER_DAY = 2  # [已废弃]
-# MAX_TRADES_PER_DAY = 5            # [已废弃]
+MAX_TRADES_PER_SYMBOL_PER_DAY = 2
+MAX_TRADES_PER_DAY = 5
 ATR_SL_MULTIPLIER = 1.5        # 止损 = 1.5 × ATR
 MIN_SL_PIPS = 15
 MAX_ACTUAL_LEVERAGE = 3.0
@@ -60,20 +55,15 @@ MAX_POSITIONS_PER_SYMBOL = 1
 ADX_THRESHOLD = 25             # 趋势强度门槛
 CORRELATION_THRESHOLD = 0.7    # 相关性上限
 
-RSI_OVERBOUGHT = 65            # RSI > 65 不做多
-RSI_OVERSOLD = 35              # RSI < 35 不做空
-# NZDUSD removed (04-25~05-01: 13 trades, -$27.77 — poor liquidity, persistent losses)
-
 SYMBOLS = [
-    "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF",
-    "EURJPY", "GBPJPY", "AUDJPY", "CADJPY", "CHFJPY"
-    # NZDUSD removed: 13 trades, -$27.77 last week — poor liquidity, unstable signals
+    "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
+    "EURJPY", "GBPJPY", "AUDJPY", "NZDJPY", "CADJPY", "CHFJPY"
 ]
 
 # 品种相关性矩阵 (简化版，基于历史经验)
 CORRELATION_MAP = {
-    # NZDUSD removed (poor liquidity, persistent losses)
-    "AUDUSD": [],
+    "NZDUSD": ["AUDUSD"],
+    "AUDUSD": ["NZDUSD"],
     "EURUSD": ["GBPUSD"],
     "GBPUSD": ["EURUSD"],
     "USDCHF": ["EURUSD", "GBPUSD"],
@@ -147,8 +137,13 @@ def can_trade_symbol(log, symbol):
         except:
             pass
 
-    # 幽灵规则修复 (2026-04-27): 取消日限，不设交易上限
-    # sym_count 和 daily_count 不再拦截
+    sym_count = count_symbol_today(log, symbol)
+    if sym_count >= MAX_TRADES_PER_SYMBOL_PER_DAY:
+        return False, f"{symbol} 今日已交易 {sym_count} 次（上限 {MAX_TRADES_PER_SYMBOL_PER_DAY}）"
+
+    daily_count = count_today_trades(log)
+    if daily_count >= MAX_TRADES_PER_DAY:
+        return False, f"今日已交易 {daily_count} 笔（上限 {MAX_TRADES_PER_DAY}）"
 
     return True, "通过"
 
@@ -231,7 +226,7 @@ def calculate_signal_v3(symbol):
     # --- D1 时间框架 ---
     d1_rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_D1, 0, 100)
     if d1_rates is None or len(d1_rates) < 50:
-        return "NEUTRAL", 0, 0, [], "D1 数据不足"
+        return "NEUTRAL", 0, [], "D1 数据不足"
 
     d1_df = pd.DataFrame(d1_rates)
 
@@ -247,7 +242,7 @@ def calculate_signal_v3(symbol):
     # --- H4 时间框架 ---
     h4_rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H4, 0, 50)
     if h4_rates is None or len(h4_rates) < 30:
-        return "NEUTRAL", 0, 0, [], "H4 数据不足"
+        return "NEUTRAL", 0, [], "H4 数据不足"
 
     h4_df = pd.DataFrame(h4_rates)
 
@@ -267,7 +262,7 @@ def calculate_signal_v3(symbol):
     # --- H1 时间框架 (精确入场) ---
     h1_rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H1, 0, 50)
     if h1_rates is None or len(h1_rates) < 30:
-        return "NEUTRAL", 0, 0, [], "H1 数据不足"
+        return "NEUTRAL", 0, [], "H1 数据不足"
 
     h1_df = pd.DataFrame(h1_rates)
 
@@ -297,7 +292,7 @@ def calculate_signal_v3(symbol):
         reasons.append(f"D1 空头趋势 (EMA20={d1_ema20:.5f} < EMA50={d1_ema50:.5f})")
     else:
         reasons.append("D1 趋势不明确")
-        return "NEUTRAL", 0, 0, reasons, "D1 无明确方向"
+        return "NEUTRAL", 0, reasons, "D1 无明确方向"
 
     # 2. H4 RSI 确认
     if h4_rsi < 35 and d1_bullish:
@@ -326,7 +321,7 @@ def calculate_signal_v3(symbol):
         reasons.append(f"H1 ADX={h1_adx:.1f} (趋势强)")
     else:
         reasons.append(f"H1 ADX={h1_adx:.1f} (趋势弱，< {ADX_THRESHOLD})")
-        return "NEUTRAL", 0, h1_rsi, reasons, f"ADX {h1_adx:.1f} 低于阈值"
+        return "NEUTRAL", 0, reasons, f"ADX {h1_adx:.1f} 低于阈值"
 
     # 5. H1 布林带
     h1_ma20 = h1_df['close'].rolling(20).mean()
@@ -343,19 +338,17 @@ def calculate_signal_v3(symbol):
         reasons.append(f"H1 触及布林带上轨 ({h1_price:.5f} > {h1_upper:.5f})")
 
     # --- 确定信号 ---
-    # V4.0 修复 (2026-04-30): 强度公式从 min(score/10)*100 改为合理范围
-    # 原公式导致 70% 等异常高值（归一化失效），现改为 0.1%~2% 正常区间
     if score >= 5:
         signal = "BUY" if d1_bullish else "SELL"
-        strength = max(0, (score - 2) / 8) * 1.5  # score=5 → 0.56%, score=10 → 1.5%
+        strength = min(score / 10, 1.0) * 100  # 转换为百分比
     elif score >= 3:
         signal = "BUY" if d1_bullish else "SELL"
-        strength = max(0, (score - 2) / 8) * 1.5  # score=3 → 0.19%
+        strength = min(score / 10, 1.0) * 100
     else:
         signal = "NEUTRAL"
         strength = 0
 
-    return signal, strength, h1_rsi, reasons, f"ADX={h1_adx:.1f}, ATR={h1_atr:.5f}, RSI_H1={h1_rsi:.1f}"
+    return signal, strength, reasons, f"ADX={h1_adx:.1f}, ATR={h1_atr:.5f}, RSI_H1={h1_rsi:.1f}"
 
 # ============================================================
 # 独立风控层 (8 项校验)
@@ -549,21 +542,8 @@ def scan_market_v3():
         if not tick or tick.bid <= 0:
             continue
 
-        signal, strength, rsi, reasons, meta = calculate_signal_v3(symbol)
+        signal, strength, reasons, meta = calculate_signal_v3(symbol)
         spread = (tick.ask - tick.bid) * 10000
-
-        # RSI 过滤 (2026-04-27): 超买不做多，超卖不做空
-        rsi_blocked = False
-        if signal == "BUY" and rsi > RSI_OVERBOUGHT:
-            rsi_blocked = True
-            reasons.append(f"RSI {rsi:.1f} > {RSI_OVERBOUGHT} 超买，拦截做多")
-        elif signal == "SELL" and rsi < RSI_OVERSOLD:
-            rsi_blocked = True
-            reasons.append(f"RSI {rsi:.1f} < {RSI_OVERSOLD} 超卖，拦截做空")
-
-        if rsi_blocked:
-            signal = "NEUTRAL"
-            strength = 0
 
         results.append({
             'symbol': symbol,
@@ -571,7 +551,6 @@ def scan_market_v3():
             'spread': spread,
             'signal': signal,
             'strength': strength,
-            'rsi': rsi,
             'reasons': reasons,
             'meta': meta
         })
@@ -671,9 +650,8 @@ def send_feishu_notification(message):
 # ============================================================
 def main_loop():
     log_message("=" * 60)
-    log_message("自动监控系统 V4.0 (2026-04-30 升级)")
+    log_message("自动监控系统 V3.0 (2026-04-26 重构)")
     log_message("多时间框架: D1+H4+H1 | ADX>25 | ATR 止损 | 独立风控层")
-    log_message("V4.0: 信号强度修正 + 全信号评估 + NZDUSD 缩进修复")
     log_message("=" * 60)
 
     if not mt5.initialize():
@@ -729,56 +707,22 @@ def main_loop():
         current_positions_raw = mt5.positions_get() or []
         open_count = len(current_positions_raw)
 
-        # 开仓决策 (V4.0 修复: 评估所有达标信号，不仅最佳)
-        # 原 bug: 只评估 best (GBPUSD)，被风控拒绝后直接跳过，AUDUSD/USDCHF 完全没被检查
-        # 原 bug 2: NZDUSD 的 can_trade_symbol/risk_check 缩进在 if 内部，导致正常信号不执行校验
-        if open_count < MAX_POSITIONS and best:
-            executed = False
-            for r in results:
-                if executed:
-                    break
-                if open_count >= MAX_POSITIONS:
-                    break
-                if r['signal'] == "NEUTRAL" or r['strength'] < MIN_SIGNAL_STRENGTH:
-                    continue
-
-                # 信号门槛统一：所有品种 ≥ MIN_SIGNAL_STRENGTH (0.15%)
-
-                # 冷却期检查 (V4.0 修复: 移出 NZDUSD if 块，所有品种都检查)
-                passed1, msg1 = can_trade_symbol(trade_log, r['symbol'])
-                if not passed1:
-                    log_message(f"跳过 {r['symbol']}: {msg1}", "WARNING")
-                    continue
-
-                # V4.0 修复: 开仓前重新获取最新持仓（防止循环内开仓后数据过期）
-                current_positions_raw = mt5.positions_get() or []
-                open_count = len(current_positions_raw)
-                if open_count >= MAX_POSITIONS:
-                    log_message(f"持仓已达上限 {MAX_POSITIONS}，停止开仓", "WARNING")
-                    break
-
-                # V4.0 修复: 二次校验该品种是否已有持仓（防止 positions_get 延迟导致重复）
-                sym_positions = [p for p in current_positions_raw if p.symbol == r['symbol']]
-                if len(sym_positions) >= MAX_POSITIONS_PER_SYMBOL:
-                    log_message(f"跳过 {r['symbol']}: 已有 {len(sym_positions)} 单持仓（二次校验拦截）", "WARNING")
-                    continue
-
+        # 开仓决策 (含 8 项风控校验)
+        if open_count < MAX_POSITIONS and best and best['strength'] >= MIN_SIGNAL_STRENGTH:
+            passed1, msg1 = can_trade_symbol(trade_log, best['symbol'])
+            if not passed1:
+                log_message(f"跳过 {best['symbol']}: {msg1}", "WARNING")
+            else:
                 # 风控层校验
-                passed2, msg2 = risk_check(r['symbol'], r['signal'], 0.01, account, current_positions_raw)
+                passed2, msg2 = risk_check(best['symbol'], best['signal'], 0.01, account, current_positions_raw)
                 if not passed2:
-                    log_message(f"风控拒绝 {r['symbol']}: {msg2}", "WARNING")
-                    continue
-
-                log_message(f"强信号：{r['symbol']} {r['signal']} ({r['strength']:.3f}%) | 风控通过", "OPPORTUNITY")
-                if execute_trade(r['symbol'], r['signal'], account.balance, r['strength']):
-                    record_trade(trade_log, r['symbol'], r['signal'], "signal_open")
-                    executed = True
-                    open_count += 1
-
-            if not executed:
-                log_message(f"扫描完成，无信号通过全部风控校验", "INFO")
+                    log_message(f"风控拒绝 {best['symbol']}: {msg2}", "WARNING")
+                else:
+                    log_message(f"强信号：{best['symbol']} {best['signal']} ({best['strength']:.3f}%) | 风控通过", "OPPORTUNITY")
+                    execute_trade(best['symbol'], best['signal'], account.balance, best['strength'])
+                    record_trade(trade_log, best['symbol'], best['signal'], "signal_open")
         elif best:
-            log_message(f"无开仓操作: 持仓 {open_count} 单已达上限 / 无达标信号", "INFO")
+            log_message(f"无达标信号：{best['symbol']} 强度 {best['strength']:.3f}% < {MIN_SIGNAL_STRENGTH:.0%}", "INFO")
 
         # 打印扫描结果
         print("\n--- V3 扫描结果 ---")

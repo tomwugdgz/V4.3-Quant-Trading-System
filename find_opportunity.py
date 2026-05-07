@@ -283,10 +283,18 @@ def main():
         print(f"  Spread: {best['spread']:.1f} pips")
         print(f"  ATR-based SL: {best['dynamic_sl']:.1f} pips | TP: {best['dynamic_tp']:.1f} pips")
         
-        # 计算仓位
+        # 计算仓位 — 使用 MT5 真实的 tick_value
         risk_amount = account.balance * RISK_PERCENT
-        lot_size = round(risk_amount / (best['dynamic_sl'] * 0.10), 2)
-        lot_size = min(lot_size, 1.0)
+        sym_info = mt5.symbol_info(best['symbol'])
+        # tick_value = 每 tick (1 point) 的盈亏金额
+        # 标准手(1.0 lot) = 100,000 units
+        # 1 pip = 10 points (5 位报价)，所以 pip_value_per_lot = tick_value * 10
+        tick_value = (sym_info.trade_tick_value or 0) if sym_info else 0
+        if tick_value <= 0:
+            tick_value = 1.0  # fallback: $1/point = $10/pip (USD直盘标准值)
+        pip_value_per_lot = tick_value * 10
+        lot_size = round(risk_amount / (best['dynamic_sl'] * pip_value_per_lot), 2)
+        lot_size = max(0.01, min(lot_size, 1.0))
         
         print(f"\n  POSITION SIZING:")
         print(f"    Risk: ${risk_amount:.2f} ({RISK_PERCENT*100:.1f}% of ${account.balance:.2f})")
