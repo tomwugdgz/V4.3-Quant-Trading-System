@@ -51,9 +51,9 @@ def calc_atr(symbol, tf=mt5.TIMEFRAME_H1, period=14):
 
 def get_dynamic_sl_tp(symbol):
     """根据 ATR 动态计算止损止盈
-    JPY 品种用更大止损（波动率更高）
-    非 JPY 品种用标准止损
-    v2: JPY ATR 乘数从 2.5 提升到 3.0，最低 SL 从 25 提到 35 pips
+    JPY: ATR×1.5 (最低20pip) | 非JPY: ATR×1.5 (最低15pip)
+    TP = SL × 2.0 (1:2 盈亏比)
+    v2.2: JPY从v2.1固定15pip升级为ATR×1.5最低20pip（回测证明15pip 100%必打）
     """
     atr = calc_atr(symbol)
     sym = mt5.symbol_info(symbol)
@@ -67,11 +67,10 @@ def get_dynamic_sl_tp(symbol):
     # ATR 转 pips
     atr_pips = atr / pip_size
 
-    # JPY 品种：v0固定止损，v0时期(23天)稳定盈利，参数最简单最稳定
-    # v1 ATR×2.5反而亏损是因为"多品种叠加"，不是止损本身的问题
+    # JPY 品种：ATR×1.5，最低 20 pip（回测验证：15pip固定止损100%必打）
     if is_jpy(symbol):
-        sl_pips = 15                        # v2.1: 回滚v0固定止损
-        tp_pips = 30                        # 1:2
+        sl_pips = max(atr_pips * 1.5, 20)   # v2.2: 15固定→ATR×1.5(最低20pip)
+        tp_pips = sl_pips * 2.0
     else:
         sl_pips = max(atr_pips * 1.5, 15)  # 非JPY ATR动态止损
         tp_pips = sl_pips * 2.0
@@ -202,7 +201,7 @@ def execute(symbol, direction, strength):
 
 def run():
     log("=" * 60)
-    log("30min Patrol — v2.1 回滚v0止损+保留相关性过滤")
+    log("30min Patrol — v2.2 JPY止损优化版 (ATR×1.5最低20pip)")
     log("=" * 60)
     info = mt5_connect()
     if not info:
