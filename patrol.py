@@ -67,9 +67,9 @@ def get_dynamic_sl_tp(symbol):
     # ATR 转 pips
     atr_pips = atr / pip_size
 
-    # JPY 品种：ATR×1.5，最低 20 pip（回测验证：15pip固定止损100%必打）
+    # JPY 品种：ATR×2.0（进化结果最优参数）
     if is_jpy(symbol):
-        sl_pips = max(atr_pips * 1.5, 20)   # v2.2: 15固定→ATR×1.5(最低20pip)
+        sl_pips = max(atr_pips * 2.0, 20)   # v3: ATR×2.0（进化验证最优）
         tp_pips = sl_pips * 2.0
     else:
         sl_pips = max(atr_pips * 1.5, 15)  # 非JPY ATR动态止损
@@ -201,7 +201,7 @@ def execute(symbol, direction, strength):
 
 def run():
     log("=" * 60)
-    log("30min Patrol — v2.2 JPY止损优化版 (ATR×1.5最低20pip)")
+    log("30min Patrol — v3 进化优化版 (JPY ATR×2.0)")
     log("=" * 60)
     info = mt5_connect()
     if not info:
