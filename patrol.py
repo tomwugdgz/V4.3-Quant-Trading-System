@@ -16,7 +16,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='repla
 ACCOUNT = 52797683
 SERVER = "ICMarketsSC-Demo"
 THRESHOLD = 0.15        # 信号强度门槛 %
-MAX_POS = 5              # 最多持仓数
+MAX_POS = 3              # v2.1: 5→3（5月7日亏损根因：5个相关品种同向叠加）
 RISK_PCT = 0.005       # 0.5% 单笔风险
 MAX_LOTS_STRONG = 0.15  # 强信号最大仓位
 
@@ -66,13 +66,14 @@ def get_dynamic_sl_tp(symbol):
     # ATR 转 pips
     atr_pips = atr / pip_size
 
-    # JPY 品种：ATR * 3.0，最低 35 pips
+    # JPY 品种：v0固定止损，v0时期(23天)稳定盈利，参数最简单最稳定
+    # v1 ATR×2.5反而亏损是因为"多品种叠加"，不是止损本身的问题
     if is_jpy(symbol):
-        sl_pips = max(atr_pips * 3.0, 35)   # v2: 2.5→3.0, 25→35
-        tp_pips = sl_pips * 2.0              # TP = SL * 2
+        sl_pips = 15                        # v2.1: 回滚v0固定止损
+        tp_pips = 30                        # 1:2
     else:
-        sl_pips = max(atr_pips * 1.5, 15)    # 非 JPY 最少 15 pips
-        tp_pips = sl_pips * 2.0              # TP = SL * 2
+        sl_pips = max(atr_pips * 1.5, 15)  # 非JPY ATR动态止损
+        tp_pips = sl_pips * 2.0
 
     log(f"  ATR={atr:.5f} | SL={sl_pips:.1f}pips | TP={tp_pips:.1f}pips")
     return sl_pips, tp_pips, digits, point, pip_div
@@ -200,7 +201,7 @@ def execute(symbol, direction, strength):
 
 def run():
     log("=" * 60)
-    log("30min Patrol — ATR动态止损版 v2")
+    log("30min Patrol — v2.1 回滚v0止损+保留相关性过滤")
     log("=" * 60)
     info = mt5_connect()
     if not info:
