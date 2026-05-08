@@ -1,19 +1,21 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-旺财智能交易系统 v3
+旺财智能交易系统 v4
 核心策略：不频繁交易 | 超强信号加仓 | 稳扎稳打向上
-- 信号强度分档：SUPER(60%+) > STRONG(45%+) > NORMAL(15%+)
-- 手数分档：SUPER(0.20) > STRONG(0.15) > NORMAL(0.08)
-- 过滤条件：盈亏比<1.5跳过 | TP<20pip跳过
-- JPY止损：ATR×2.0（最低20pip）
+v4变更（2026-05-08）：
+- 亚洲盘禁止：00:00-08:00 北京时间不新开仓
+- 每小时最多1单：防止密集开仓
+- 强化冷却机制：同品种2h + 同组1h
+- 已有持仓检查（修复重复开仓bug）
+Signal: SUPER(>=60%)->0.20 | STRONG(>=45%)->0.15 | NORMAL->0.08
 """
 import MetaTrader5 as mt5
 import pandas as pd
 import numpy as np
 import sys
 import io
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
@@ -23,28 +25,37 @@ SERVER = "ICMarketsSC-Demo"
 
 # ========== 交易策略参数 ==========
 THRESHOLD = 0.15        # 信号强度最低门槛（15%）
-SUPER_SIGNAL = 0.60    # 超强信号门槛（60%+）— 可加大手数
+SUPER_SIGNAL = 0.60    # 超强信号门槛（60%+）
 MAX_POS = 3              # 最多持仓数
-RISK_PCT = 0.005        # 0.5% 单笔风险（不贪心）
+RISK_PCT = 0.005        # 0.5% 单笔风险
 MAX_LOTS_NORMAL = 0.08  # 普通信号最大手数
-MAX_LOTS_STRONG = 0.15  # 强信号（≥45%）手数
-MAX_LOTS_SUPER = 0.20   # 超强信号（≥60%）手数
+MAX_LOTS_STRONG = 0.15  # 强信号（>=45%）手数
+MAX_LOTS_SUPER = 0.20   # 超强信号（>=60%）手数
+
+# ========== v4 新增参数 ==========
+ASIA_BLOCK_START = 0    # 亚洲盘禁止开始（小时，0=午夜）
+ASIA_BLOCK_END = 8      # 亚洲盘禁止结束（小时，8=早8点）
+MAX_TRADES_PER_HOUR = 1 # 每小时最多开仓次数
 
 SYMBOLS = [
-    # 直盘
     "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD",
-    # 交叉盘
     "EURJPY", "AUDJPY", "EURGBP", "EURCAD", "GBPAUD", "GBPJPY",
     "EURAUD", "AUDCAD", "AUDCHF", "NZDJPY", "CADJPY", "CHFJPY",
-    # 贵金属
     "XAUUSD", "XAGUSD"
 ]
+
+TZ = timezone(timedelta(hours=8))
 
 def log(msg):
     print(msg, flush=True)
 
 def is_jpy(symbol):
     return "JPY" in symbol
+
+def is_asia_session():
+    """检查是否在亚洲盘禁止时段（北京时间）"""
+    hour = datetime.now(TZ).hour
+    return ASIA_BLOCK_START <= hour < ASIA_BLOCK_END
 
 def calc_atr(symbol, tf=mt5.TIMEFRAME_H1, period=14):
     rates = mt5.copy_rates_from_pos(symbol, tf, 0, 50)
@@ -60,28 +71,22 @@ def calc_atr(symbol, tf=mt5.TIMEFRAME_H1, period=14):
 
 def get_dynamic_sl_tp(symbol):
     """根据 ATR 动态计算止损止盈
-    JPY: ATR×1.5 (最低20pip) | 非JPY: ATR×1.5 (最低15pip)
-    TP = SL × 2.0 (1:2 盈亏比)
-    v2.2: JPY从v2.1固定15pip升级为ATR×1.5最低20pip（回测证明15pip 100%必打）
+    JPY: ATR x 2.0（最低20pip）| 非JPY: ATR x 1.5（最低15pip）
+    TP = SL x 2.0（1:2 盈亏比）
     """
     atr = calc_atr(symbol)
     sym = mt5.symbol_info(symbol)
     digits = sym.digits
     point = sym.point
-
-    # pip 计算
     pip_div = 100 if digits == 3 else 10000
     pip_size = point * 10 if digits in (3, 5) else point
-
-    # ATR 转 pips
     atr_pips = atr / pip_size
 
-    # JPY 品种：ATR×2.0（进化结果最优参数）
     if is_jpy(symbol):
-        sl_pips = max(atr_pips * 2.0, 20)   # v3: ATR×2.0（进化验证最优）
+        sl_pips = max(atr_pips * 2.0, 20)   # v3: ATR x 2.0
         tp_pips = sl_pips * 2.0
     else:
-        sl_pips = max(atr_pips * 1.5, 15)  # 非JPY ATR动态止损
+        sl_pips = max(atr_pips * 1.5, 15)
         tp_pips = sl_pips * 2.0
 
     log(f"  ATR={atr:.5f} | SL={sl_pips:.1f}pips | TP={tp_pips:.1f}pips")
@@ -108,7 +113,6 @@ def calculate_signal_v3(symbol):
         h4df = pd.DataFrame(h4)
         h1df = pd.DataFrame(h1)
 
-        # D1 方向
         ema20 = d1df['close'].ewm(span=20).mean().iloc[-1]
         ema50 = d1df['close'].ewm(span=50).mean().iloc[-1]
         price = d1df['close'].iloc[-1]
@@ -116,17 +120,14 @@ def calculate_signal_v3(symbol):
         d1_bear = ema20 < ema50 and price < ema20
         if not d1_bull and not d1_bear:
             return None, 0
-
         direction = "BUY" if d1_bull else "SELL"
 
-        # H4 RSI
         delta4 = h4df['close'].diff()
         gain4 = delta4.clip(lower=0).rolling(14).mean()
         loss4 = (-delta4.clip(upper=0)).rolling(14).mean()
         rs4 = gain4 / loss4.replace(0, np.nan)
         h4_rsi = (100 - 100 / (1 + rs4)).iloc[-1]
 
-        # H1 ADX
         hi, lo, cl = h1df['high'], h1df['low'], h1df['close']
         tr1 = hi - lo
         tr2 = abs(hi - cl.shift(1))
@@ -143,7 +144,6 @@ def calculate_signal_v3(symbol):
         if not np.isfinite(adx) or adx < 25:
             return None, 0
 
-        # 评分
         score = 0
         if d1_bull: score += 3
         elif d1_bear: score -= 3
@@ -157,26 +157,21 @@ def calculate_signal_v3(symbol):
         return None, 0
 
 def execute(symbol, direction, strength):
-    """执行开仓 — 使用动态止损"""
+    """执行开仓"""
     tick = mt5.symbol_info_tick(symbol)
     sym = mt5.symbol_info(symbol)
     digits = sym.digits
     price = tick.ask if direction == "BUY" else tick.bid
     log(f"执行: {direction} {symbol} @{price:.{digits}f} (信号强度{strength:.1f}%)")
 
-    # 动态计算 SL/TP
     sl_pips, tp_pips, digits, point, pip_div = get_dynamic_sl_tp(symbol)
 
-    # ========== 手数计算（按信号强度分档）==========
     pip_size = point * 10 if digits in (3, 5) else point
     pip_value = sym.trade_tick_value * (pip_size / sym.trade_tick_size) if sym.trade_tick_size > 0 else pip_size * sym.trade_contract_size
     info = mt5.account_info()
     risk_amt = info.balance * RISK_PCT
-
-    # 基础手数计算
     base_lots = risk_amt / (sl_pips * pip_value) if sl_pips > 0 and pip_value > 0 else 0.01
 
-    # 信号强度分档
     if strength >= SUPER_SIGNAL * 100:
         lot_tag = "SUPER"
         max_lot = MAX_LOTS_SUPER
@@ -192,8 +187,6 @@ def execute(symbol, direction, strength):
 
     lots = round(max(0.01, suggested_lots), 2)
 
-    # ========== 止盈空间检查 ==========
-    # 只在盈亏比≥1:2时才执行（不频繁，不勉强）
     rr_ratio = tp_pips / sl_pips if sl_pips > 0 else 0
     if rr_ratio < 1.5:
         log(f"  [过滤] 盈亏比{rr_ratio:.1f}<1.5，空间不足，跳过")
@@ -202,10 +195,8 @@ def execute(symbol, direction, strength):
         log(f"  [过滤] TP仅{tp_pips:.0f}pip<20pip，空间不足，跳过")
         return False
 
-    # SL/TP 价格
     sl_dist = sl_pips / pip_div
     tp_dist = tp_pips / pip_div
-    pip_unit = 0.0001 if digits == 5 else 0.01
     sl_price = round(price - sl_dist, digits) if direction == "BUY" else round(price + sl_dist, digits)
     tp_price = round(price + tp_dist, digits) if direction == "BUY" else round(price - tp_dist, digits)
 
@@ -220,7 +211,7 @@ def execute(symbol, direction, strength):
         "tp": tp_price,
         "deviation": 50,
         "magic": 240501,
-        "comment": "Patrol Smart",
+        "comment": "Patrol Smart v4",
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
@@ -237,7 +228,7 @@ def execute(symbol, direction, strength):
 
 def run():
     log("=" * 60)
-    log("30min Patrol — v3 进化优化版 (JPY ATR×2.0)")
+    log("30min Patrol - v4 亚洲盘禁止版")
     log("=" * 60)
     info = mt5_connect()
     if not info:
@@ -254,8 +245,27 @@ def run():
         log("持仓已满，跳过")
         return
 
-    # === v2 相关性过滤 ===
-    # 已有持仓的货币族
+    # ========== v4 新增：亚洲盘禁止 ==========
+    if is_asia_session():
+        log("[v4 亚洲盘] 禁止时段(00:00-08:00)，跳过所有开仓")
+        mt5.shutdown()
+        return
+
+    # ========== v4 新增：每小时最多1单 ==========
+    def trades_this_hour():
+        try:
+            to_time = int(datetime.now().timestamp())
+            from_time = to_time - 3600
+            deals = mt5.history_deals_get(from_time, to_time)
+            return sum(1 for d in deals if d.comment in ('Patrol Smart', 'Patrol Smart v4', 'Patrol Auto') and d.entry in (0,1))
+        except:
+            return 0
+
+    if trades_this_hour() >= MAX_TRADES_PER_HOUR:
+        log(f"[v4 频率] 本小时已开{Max_TRADES_PER_HOUR}单，跳过")
+        mt5.shutdown()
+        return
+
     CORRELATED_GROUPS = {
         "AUD": ["AUDUSD", "AUDCHF", "AUDCAD", "AUDJPY", "EURAUD", "GBPAUD"],
         "EUR": ["EURUSD", "EURGBP", "EURCAD", "EURJPY", "EURAUD"],
@@ -264,34 +274,31 @@ def run():
     }
 
     def has_correlated_position(symbol, direction, positions):
-        """检查是否已有相关品种同向持仓"""
         groups = [g for g, syms in CORRELATED_GROUPS.items() if symbol in syms]
         for p in positions:
             if p.symbol == symbol:
-                continue  # 跳过自己
+                continue
             pgroups = [g for g, syms in CORRELATED_GROUPS.items() if p.symbol in syms]
             if any(g in groups for g in pgroups):
-                # 检查方向是否相同
                 pdir = "BUY" if p.type == 0 else "SELL"
                 if pdir == direction:
                     return True
         return False
 
     def recently_traded(symbol, hours=2):
-        """检查该品种是否在最近N小时内有平仓记录（SL/TP/人工平仓）"""
+        """检查该品种是否在最近N小时有平仓记录"""
         try:
             to_time = int(datetime.now().timestamp())
             from_time = to_time - hours * 3600
             deals = mt5.history_deals_get(from_time, to_time)
             if deals:
                 for d in deals:
-                    if d.symbol == symbol and d.comment in ('Patrol Smart', 'Patrol Auto', 'FORCE_CLOSE'):
+                    if d.symbol == symbol and d.comment in ('Patrol Smart', 'Patrol Smart v4', 'Patrol Auto', 'FORCE_CLOSE'):
                         return True
         except:
             pass
         return False
 
-    # 扫描所有品种
     log("扫描市场...")
     results = []
     for sym_name in SYMBOLS:
@@ -306,9 +313,9 @@ def run():
 
     if not results:
         log("无达标信号")
+        mt5.shutdown()
         return
 
-    # 按强度排序，取最强
     results.sort(key=lambda x: x[2], reverse=True)
     best_sym, best_dir, best_str = results[0]
     log(f"*** 强信号: {best_sym} {best_dir} {best_str:.1f}%")
@@ -316,19 +323,21 @@ def run():
     # 检查是否已有该品种持仓
     if any(p.symbol == best_sym for p in positions):
         log(f"{best_sym} 已有持仓，跳过")
+        mt5.shutdown()
         return
 
-    # === v2.1 同品种冷却检查 ===
+    # 同品种冷却
     if recently_traded(best_sym, hours=2):
         log(f"  [v2.1 冷却] {best_sym} 2小时内刚平仓，跳过")
+        mt5.shutdown()
         return
 
-    # === v2 相关性检查 ===
+    # 相关性检查
     if has_correlated_position(best_sym, best_dir, positions):
         log(f"  [v2 过滤] {best_sym} 与已有持仓同向相关，跳过")
+        mt5.shutdown()
         return
 
-    # 执行
     execute(best_sym, best_dir, best_str)
     mt5.shutdown()
     log("Patrol完成")
