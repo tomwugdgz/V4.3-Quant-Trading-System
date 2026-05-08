@@ -29,44 +29,43 @@
   "symbol_overrides": {
     "_comment": "品种专属参数覆盖",
     "USDJPY": {
-      "atr_sl_mult": 2.5,
-      "min_sl_pips": 25,
-      "volatility_threshold": 0.25,
+      "atr_sl_mult": 3.0,
+      "min_sl_pips": 35,
       "signal_threshold_mult": 1.0
     },
     "AUDJPY": {
-      "atr_sl_mult": 2.5,
-      "min_sl_pips": 25,
-      "volatility_threshold": 0.25,
+      "atr_sl_mult": 3.0,
+      "min_sl_pips": 35,
+      "volatility_threshold": 0.20,
       "signal_threshold_mult": 1.0
     },
     "EURJPY": {
-      "atr_sl_mult": 2.0,
-      "min_sl_pips": 20,
+      "atr_sl_mult": 3.0,
+      "min_sl_pips": 35,
       "volatility_threshold": 0.20,
       "signal_threshold_mult": 1.0
     },
     "GBPJPY": {
-      "atr_sl_mult": 2.0,
-      "min_sl_pips": 20,
+      "atr_sl_mult": 3.0,
+      "min_sl_pips": 35,
       "volatility_threshold": 0.20,
       "signal_threshold_mult": 1.0
     },
     "NZDJPY": {
-      "atr_sl_mult": 2.5,
-      "min_sl_pips": 25,
-      "volatility_threshold": 0.25,
+      "atr_sl_mult": 3.0,
+      "min_sl_pips": 35,
+      "volatility_threshold": 0.20,
       "signal_threshold_mult": 1.0
     },
     "CADJPY": {
-      "atr_sl_mult": 2.0,
-      "min_sl_pips": 20,
+      "atr_sl_mult": 3.0,
+      "min_sl_pips": 35,
       "volatility_threshold": 0.20,
       "signal_threshold_mult": 1.0
     },
     "CHFJPY": {
-      "atr_sl_mult": 2.0,
-      "min_sl_pips": 20,
+      "atr_sl_mult": 3.0,
+      "min_sl_pips": 35,
       "volatility_threshold": 0.20,
       "signal_threshold_mult": 1.0
     },
@@ -101,6 +100,28 @@
   },
 
   "evolution_history": [
+    {
+      "id": "v2",
+      "date": "2026-05-08",
+      "trigger": "AUDJPY 亏损 -$50.85（05-08凌晨），所有止损均来自AUD系同向叠加",
+      "changes": {
+        "JPY_SLL": {"atr_sl_mult": "2.5→3.0", "min_sl": "25pips→35pips"},
+        "correlation_filter": "新增 - AUD/EUR/USD/JPY 相关性组，同向相关持仓时跳过新信号",
+        "max_positions": "3→5（已更新）"
+      },
+      "files_updated": ["patrol.py (v2)"],
+      "verified": true,
+      "test_result": "AUDJPY SL 38.4pips→46.1pips，EURUSD持仓时AUDUSD/AUDCHF自动过滤"
+    },
+    {
+      "id": "v2",
+      "date": "2026-05-07",
+      "trigger": "Karen 指令将持仓上限从 3 调整为 5",
+      "changes": {
+        "max_positions": 5
+      },
+      "files_updated": ["patrol.py", "config/core_config.json"]
+    },
     {
       "id": "v1",
       "date": "2026-05-06",

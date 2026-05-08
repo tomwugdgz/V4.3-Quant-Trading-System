@@ -52,6 +52,7 @@ def get_dynamic_sl_tp(symbol):
     """根据 ATR 动态计算止损止盈
     JPY 品种用更大止损（波动率更高）
     非 JPY 品种用标准止损
+    v2: JPY ATR 乘数从 2.5 提升到 3.0，最低 SL 从 25 提到 35 pips
     """
     atr = calc_atr(symbol)
     sym = mt5.symbol_info(symbol)
@@ -65,9 +66,9 @@ def get_dynamic_sl_tp(symbol):
     # ATR 转 pips
     atr_pips = atr / pip_size
 
-    # JPY 品种：波动率高，用更大止损
+    # JPY 品种：ATR * 3.0，最低 35 pips
     if is_jpy(symbol):
-        sl_pips = max(atr_pips * 2.5, 25)   # JPY 最少 25 pips
+        sl_pips = max(atr_pips * 3.0, 35)   # v2: 2.5→3.0, 25→35
         tp_pips = sl_pips * 2.0              # TP = SL * 2
     else:
         sl_pips = max(atr_pips * 1.5, 15)    # 非 JPY 最少 15 pips
@@ -199,14 +200,14 @@ def execute(symbol, direction, strength):
 
 def run():
     log("=" * 60)
-    log("30min Patrol — ATR动态止损版")
+    log("30min Patrol — ATR动态止损版 v2")
     log("=" * 60)
     info = mt5_connect()
     if not info:
         return
 
     positions = mt5.positions_get() or []
-    log(f"持仓: {len(positions)}/3 余额=${info.balance:.2f}")
+    log(f"持仓: {len(positions)}/{MAX_POS} 余额=${info.balance:.2f}")
     for p in positions:
         tick = mt5.symbol_info_tick(p.symbol)
         pdir = "BUY" if p.type == 0 else "SELL"
@@ -215,6 +216,29 @@ def run():
     if len(positions) >= MAX_POS:
         log("持仓已满，跳过")
         return
+
+    # === v2 相关性过滤 ===
+    # 已有持仓的货币族
+    CORRELATED_GROUPS = {
+        "AUD": ["AUDUSD", "AUDCHF", "AUDCAD", "AUDJPY", "EURAUD", "GBPAUD"],
+        "EUR": ["EURUSD", "EURGBP", "EURCAD", "EURJPY", "EURAUD"],
+        "USD": ["EURUSD", "GBPUSD", "AUDUSD", "NZDUSD"],
+        "JPY": ["USDJPY", "AUDJPY", "EURJPY", "GBPJPY", "NZDJPY", "CADJPY", "CHFJPY"],
+    }
+
+    def has_correlated_position(symbol, direction, positions):
+        """检查是否已有相关品种同向持仓"""
+        groups = [g for g, syms in CORRELATED_GROUPS.items() if symbol in syms]
+        for p in positions:
+            if p.symbol == symbol:
+                continue  # 跳过自己
+            pgroups = [g for g, syms in CORRELATED_GROUPS.items() if p.symbol in syms]
+            if any(g in groups for g in pgroups):
+                # 检查方向是否相同
+                pdir = "BUY" if p.type == 0 else "SELL"
+                if pdir == direction:
+                    return True
+        return False
 
     # 扫描所有品种
     log("扫描市场...")
@@ -241,6 +265,11 @@ def run():
     # 检查是否已有该品种持仓
     if any(p.symbol == best_sym for p in positions):
         log(f"{best_sym} 已有持仓，跳过")
+        return
+
+    # === v2 相关性检查 ===
+    if has_correlated_position(best_sym, best_dir, positions):
+        log(f"  [v2 过滤] {best_sym} 与已有持仓同向相关，跳过")
         return
 
     # 执行
