@@ -1,8 +1,12 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-30分钟巡查 + 自动开仓 — ATR动态止损版
-修复 JPY 止损问题：JPY 用更大止损，非 JPY 用标准止损
+旺财智能交易系统 v3
+核心策略：不频繁交易 | 超强信号加仓 | 稳扎稳打向上
+- 信号强度分档：SUPER(60%+) > STRONG(45%+) > NORMAL(15%+)
+- 手数分档：SUPER(0.20) > STRONG(0.15) > NORMAL(0.08)
+- 过滤条件：盈亏比<1.5跳过 | TP<20pip跳过
+- JPY止损：ATR×2.0（最低20pip）
 """
 import MetaTrader5 as mt5
 import pandas as pd
@@ -16,10 +20,15 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='repla
 
 ACCOUNT = 52797683
 SERVER = "ICMarketsSC-Demo"
-THRESHOLD = 0.15        # 信号强度门槛 %
-MAX_POS = 3              # v2.1: 5→3（5月7日亏损根因：5个相关品种同向叠加）
-RISK_PCT = 0.005       # 0.5% 单笔风险
-MAX_LOTS_STRONG = 0.15  # 强信号最大仓位
+
+# ========== 交易策略参数 ==========
+THRESHOLD = 0.15        # 信号强度最低门槛（15%）
+SUPER_SIGNAL = 0.60    # 超强信号门槛（60%+）— 可加大手数
+MAX_POS = 3              # 最多持仓数
+RISK_PCT = 0.005        # 0.5% 单笔风险（不贪心）
+MAX_LOTS_NORMAL = 0.08  # 普通信号最大手数
+MAX_LOTS_STRONG = 0.15  # 强信号（≥45%）手数
+MAX_LOTS_SUPER = 0.20   # 超强信号（≥60%）手数
 
 SYMBOLS = [
     # 直盘
@@ -158,13 +167,40 @@ def execute(symbol, direction, strength):
     # 动态计算 SL/TP
     sl_pips, tp_pips, digits, point, pip_div = get_dynamic_sl_tp(symbol)
 
-    # 计算手数
+    # ========== 手数计算（按信号强度分档）==========
     pip_size = point * 10 if digits in (3, 5) else point
     pip_value = sym.trade_tick_value * (pip_size / sym.trade_tick_size) if sym.trade_tick_size > 0 else pip_size * sym.trade_contract_size
     info = mt5.account_info()
     risk_amt = info.balance * RISK_PCT
-    lots = risk_amt / (sl_pips * pip_value) if sl_pips > 0 and pip_value > 0 else 0.01
-    lots = round(max(0.01, min(lots, MAX_LOTS_STRONG)), 2)
+
+    # 基础手数计算
+    base_lots = risk_amt / (sl_pips * pip_value) if sl_pips > 0 and pip_value > 0 else 0.01
+
+    # 信号强度分档
+    if strength >= SUPER_SIGNAL * 100:
+        lot_tag = "SUPER"
+        max_lot = MAX_LOTS_SUPER
+        suggested_lots = min(base_lots, max_lot)
+    elif strength >= 45:
+        lot_tag = "STRONG"
+        max_lot = MAX_LOTS_STRONG
+        suggested_lots = min(base_lots, max_lot)
+    else:
+        lot_tag = "NORMAL"
+        max_lot = MAX_LOTS_NORMAL
+        suggested_lots = min(base_lots, max_lot)
+
+    lots = round(max(0.01, suggested_lots), 2)
+
+    # ========== 止盈空间检查 ==========
+    # 只在盈亏比≥1:2时才执行（不频繁，不勉强）
+    rr_ratio = tp_pips / sl_pips if sl_pips > 0 else 0
+    if rr_ratio < 1.5:
+        log(f"  [过滤] 盈亏比{rr_ratio:.1f}<1.5，空间不足，跳过")
+        return False
+    if tp_pips < 20:
+        log(f"  [过滤] TP仅{tp_pips:.0f}pip<20pip，空间不足，跳过")
+        return False
 
     # SL/TP 价格
     sl_dist = sl_pips / pip_div
@@ -189,7 +225,7 @@ def execute(symbol, direction, strength):
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
 
-    log(f"  手数={lots} | SL={sl_price:.{digits}f}({sl_pips:.0f}pips) | TP={tp_price:.{digits}f}({tp_pips:.0f}pips)")
+    log(f"  [{lot_tag}] 手数={lots} | SL={sl_price:.{digits}f}({sl_pips:.0f}pips) | TP={tp_price:.{digits}f}({tp_pips:.0f}pips) | RR={rr_ratio:.1f}:1")
     result = mt5.order_send(req)
     log(f"  结果: retcode={result.retcode} {result.comment}")
     if result.retcode == mt5.TRADE_RETCODE_DONE:
