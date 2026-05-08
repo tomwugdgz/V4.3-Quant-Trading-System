@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import sys
 import io
+from datetime import datetime
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
@@ -241,6 +242,20 @@ def run():
                     return True
         return False
 
+    def recently_traded(symbol, hours=2):
+        """检查该品种是否在最近N小时内有平仓记录（SL/TP/人工平仓）"""
+        try:
+            to_time = int(datetime.now().timestamp())
+            from_time = to_time - hours * 3600
+            deals = mt5.history_deals_get(from_time, to_time)
+            if deals:
+                for d in deals:
+                    if d.symbol == symbol and d.comment in ('Patrol Smart', 'Patrol Auto', 'FORCE_CLOSE'):
+                        return True
+        except:
+            pass
+        return False
+
     # 扫描所有品种
     log("扫描市场...")
     results = []
@@ -266,6 +281,11 @@ def run():
     # 检查是否已有该品种持仓
     if any(p.symbol == best_sym for p in positions):
         log(f"{best_sym} 已有持仓，跳过")
+        return
+
+    # === v2.1 同品种冷却检查 ===
+    if recently_traded(best_sym, hours=2):
+        log(f"  [v2.1 冷却] {best_sym} 2小时内刚平仓，跳过")
         return
 
     # === v2 相关性检查 ===
