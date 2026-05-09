@@ -1,314 +1,178 @@
-# V4.3 量化交易系统
+# 旺财智能交易系统 v5.1 - Kelly Criterion 版
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status](https://img.shields.io/badge/status-active-success.svg)]()
-
-**一个基于多因子评分的智能量化交易系统**
+> 版本：v5.1 | 更新：2026-05-09 | 核心：Kelly Criterion 底层决策
 
 ---
 
-## 📖 项目简介
+## 版本说明
 
-V4.3 是一个多因子量化交易系统，通过市场状态判断、多因子评分、动态风控三大核心模块，实现智能化交易决策。
+### v5.1（2026-05-09）- Kelly Criterion 底层化
 
-### 核心特性
+**核心变更**：将 Kelly Criterion 公式作为系统底层交易决策逻辑，实现"少而精"的高胜率交易。
 
-- 🎯 **市场状态感知**: 根据趋势/震荡/高波动动态调整策略
-- 📊 **多因子评分**: 4 大因子库，16 个子因子，全面评估市场
-- 🛡️ **动态风控**: 独立 Risk Agent，实时否决权
-- 📈 **自动化复盘**: 自动归因分析，持续进化
+#### Kelly 公式集成
 
-### 性能目标
+```
+f* = (b × p - q) / b
 
-| 指标 | v2.0 当前 | V4.3 目标 | 提升 |
-|------|----------|----------|------|
-| 回测稳定性 | 45% | ≥70% | +55% |
-| 综合评分 | 72.9 | ≥80 | +10% |
-| 胜率 | 52.8% | ≥58% | +10% |
+p = 胜率（历史统计）
+q = 1 - p
+b = 盈亏比（TP/SL）
+f* = Kelly 最优仓位比例
+```
+
+#### 三层 Kelly 决策
+
+| 层级 | 决策内容 | 实现 |
+|------|---------|------|
+| 品种过滤 | Kelly f* < 5% → 永久屏蔽 | `kelly_filter()` |
+| 信号强度 | < 45% → 不开仓 | `SIGNAL_MIN = 0.45` |
+| Kelly EV | p×b - q ≤ 0 → 跳过 | `calc_expected_value()` |
+
+#### 手数配置（按 Kelly 质量）
+
+| Kelly 质量 | 信号 >=60% | 信号 45-60% |
+|-----------|-----------|------------|
+| 高（kf>10%） | 0.20手 | 0.15手 |
+| 中（5-10%） | 0.15手 | 0.10手 |
+| 低（<5%） | 0.08手 | 0.05手 |
+
+### Kelly 品种注册表
+
+| 品种 | Kelly f* | 质量 | 状态 |
+|------|---------|------|------|
+| XAUUSD | 50.0% | 高 | 可交易（双倍风险） |
+| USDCAD | 42.0% | 高 | 可交易（双倍风险） |
+| AUDUSD | 9.4% | 中 | 可交易 |
+| USDCHF | 8.5% | 中 | 可交易 |
+| GBPUSD | 8.0% | 中 | 可交易 |
+| EURUSD | 3.4% | 低 | 可交易（降级风险） |
+| NZDUSD | -112.9% | 负 | **永久屏蔽** |
+| USDJPY | -113.8% | 负 | **永久屏蔽** |
+| AUDJPY | -86.6% | 负 | **永久屏蔽** |
+| BTCUSD | -383.7% | 负 | **永久屏蔽** |
+
+### v5.1 参数
+
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| SIGNAL_MIN | 45% | 信号强度门槛 |
+| SUPER_SIGNAL | 60% | SUPER 信号门槛 |
+| RISK_PCT_SUPER | 0.5% | 60%+ 信号每笔风险 |
+| RISK_PCT_STRONG | 0.3% | 45-60% 信号每笔风险 |
+| KELLY_MIN_F | 5% | Kelly f* 屏蔽阈值 |
+| KELLY_BOOST_MULT | 2.0 | 高 Kelly 品种风险倍数 |
+| MAX_TRADES_PER_HOUR | 1 | 每小时最多 1 单 |
+| CORRELATION_COOLDOWN_H | 2 | 同组交易冷却 |
 
 ---
 
-## 🚀 快速开始
+## 系统架构
 
-### 环境要求
+```
+patrol.py (v5.1)
+├── Kelly 品种过滤（负期望品种屏蔽）
+├── 信号计算（calculate_signal_v3）
+│   ├── D1 EMA20/50 方向
+│   ├── H4 RSI 超买超卖
+│   └── H1 ADX 趋势强度
+├── Kelly EV 校验（预期值 > 0）
+├── ATR 动态 SL/TP
+│   ├── JPY：ATR×2.0（最低 20pip）
+│   ├── 贵金属：ATR×1.5（最低 50pip）
+│   └── 其他：ATR×1.5（最低 15pip）
+├── 风险计算（手数倒推）
+└── 相关性 + 冷却过滤
+```
 
-- Python 3.8+
-- MetaTrader 5
-- Windows/Linux/macOS
+---
 
-### 安装依赖
+## 全流程追溯
+
+```
+复盘 → 优化(v5) → 配置(v5.1) → 策略 → 执行
+```
+
+| 文件 | 说明 |
+|------|------|
+| `patrol.py` | 核心策略（v5.1） |
+| `kelly_analysis.py` | Kelly 数据分析脚本 |
+| `system_check.py` | 系统全面检查 |
+| `D:\LLM-Wiki\进化\v5_Kelly公式底层化_2026-05-09.md` | 进化文件 |
+| `D:\LLM-Wiki\trading\hermes-messages\outbox\` | Hermes 同步消息 |
+
+---
+
+## Git Commits
+
+| Commit | 版本 | 说明 |
+|--------|------|------|
+| `ba0c5dd` | v5.1 | Kelly公式底层化：信号门槛45%+风险倒推+负Kelly屏蔽 |
+| `20e6902` | v5 | Kelly Criterion版：负期望品种屏蔽+信号门槛45% |
+| `be9b826` | v4.1 | 贵金属全域版+ATR动态止损 |
+| `32d9820` | v4 | 亚洲盘禁止+每小时1单+强化冷却 |
+
+---
+
+## 文件结构
+
+```
+trading/
+├── patrol.py              # 核心策略（当前版本 v5.1）
+├── kelly_analysis.py      # Kelly 数据分析
+├── system_check.py        # 系统检查
+├── monitor_positions.py    # 持仓监控
+├── evolver_v1.py          # 进化分析
+├── daily_summary.py       # 每日汇总
+└── auto_trade_self.py     # 自动交易（旧版）
+```
+
+---
+
+## 账户信息
+
+- **平台**：ICMarketsSC-Demo
+- **账户**：52797683
+- **余额**：$9899.46（2026-05-09）
+- **杠杆**：1:5
+
+---
+
+## 使用说明
+
+### 运行 patrol
 
 ```bash
-pip install -r requirements.txt
+python patrol.py
 ```
 
-### 配置系统
-
-1. 编辑配置文件 `config/` 目录下的 JSON 文件
-2. 配置 MetaTrader 5 账户信息
-3. 设置风控参数
-
-### 运行系统
+### 系统检查
 
 ```bash
-# 环境检查
-python v4_3/check_environment.py
+python system_check.py
+```
 
-# 启动模拟盘
-python v4_3/paper_trading_monitor.py
+### Kelly 分析
 
-# 查看状态
-python v4_3/check_paper_trading_status.py
-
-# 生成每日报告
-python v4_3/generate_daily_report.py
+```bash
+python kelly_analysis.py
 ```
 
 ---
 
-## 📁 项目结构
+## 更新日志
 
-```
-V4.3-Quant-Trading-System/
-├── core/                        # 核心模块
-│   ├── market_regime.py         # 市场状态判断
-│   ├── factor_score.py          # 因子评分引擎
-│   ├── risk_agent.py            # 风控 Agent
-│   └── review_agent.py          # 复盘 Agent
-│
-├── factors/                     # 因子库
-│   ├── momentum.py              # 动量因子
-│   ├── mean_reversion.py        # 均值回归因子
-│   ├── breakout.py              # 突破因子
-│   └── volatility.py            # 波动率因子
-│
-├── config/                      # 配置文件
-│   ├── regime_config.json
-│   ├── factor_weights.json
-│   ├── risk_params.json
-│   └── paper_trading_config.json
-│
-├── docs/                        # 文档
-│   ├── V4.3_ARCHITECTURE.md
-│   ├── FACTOR_LIBRARY.md
-│   ├── RISK_AGENT_MANUAL.md
-│   └── ...
-│
-├── tests/                       # 测试
-│   ├── test_factors.py
-│   ├── test_review.py
-│   └── test_v43_system.py
-│
-├── logs/                        # 日志
-├── trading/                     # 数据库
-│
-├── requirements.txt             # 依赖
-├── README.md                    # 本文件
-└── LICENSE                      # 开源协议
-```
-
----
-
-## 📊 因子库
-
-### 4 大因子类别
-
-| 因子 | 权重 | 子因子 | 适用市场 |
-|------|------|--------|----------|
-| 动量因子 | 30% | EMA 斜率、价格动量、MACD | 趋势市 |
-| 均值回归因子 | 30% | RSI、布林带、乖离率 | 震荡市 |
-| 突破因子 | 20% | 价格突破、成交量、形态 | 突破行情 |
-| 波动率因子 | 20% | ATR、布林带宽度、历史波动率 | 所有市场 |
-
----
-
-## 🛡️ 风控系统
-
-### 账户级风控
-
-- 保证金水平 >200%
-- 实际杠杆 <3x
-- 单日亏损 ≤3%
-- 总回撤 ≤10%
-
-### 仓位级风控
-
-- 最大持仓 ≤3 单
-- 单一品种 ≤2 单
-- 单笔风险 ≤0.5%
-- 总风险敞口 ≤3%
-
-### 止损设置
-
-- 硬止损：ATR×1.5 或 20 点
-- 移动止损：盈利 1R 后启动
-
----
-
-## 📈 模拟盘
-
-### 当前状态
-
-- **状态**: 🟢 运行中
-- **启动时间**: 2026-04-11
-- **扫描间隔**: 60 分钟
-- **交易品种**: 7 个主要外汇
-
-### 验收标准
-
-| 指标 | 标准 | 周期 |
+| 日期 | 版本 | 变更 |
 |------|------|------|
-| 交易次数 | ≥10 单 | 2 周 |
-| 胜率 | >50% | 2 周 |
-| 盈亏比 | >1.5:1 | 2 周 |
-| 最大回撤 | <5% | 2 周 |
-| 风控违规 | 0 次 | 2 周 |
+| 2026-05-09 | v5.1 | Kelly公式底层化：三层过滤+风险倒推手数 |
+| 2026-05-08 | v4.1 | 贵金属全域支持 |
+| 2026-05-08 | v4 | 亚洲盘禁止（00:00-08:00） |
+| 2026-05-07 | v3.1 | 信号分档+盈亏比过滤 |
+| 2026-05-06 | v3 | JPY止损差异化 |
+| 2026-05-04 | v2 | 自主交易系统上线 |
 
 ---
 
-## 📚 文档
+## 法律声明
 
-### 核心文档
-
-- [系统架构](docs/V4.3_ARCHITECTURE.md) - 完整系统架构说明
-- [因子库文档](docs/FACTOR_LIBRARY.md) - 4 大因子详细说明
-- [风控手册](docs/RISK_AGENT_MANUAL.md) - 风控规则和案例
-- [复盘指南](docs/REVIEW_AGENT_GUIDE.md) - 归因分析和报告生成
-
-### 使用文档
-
-- [部署检查清单](docs/DEPLOYMENT_CHECKLIST.md) - 部署前准备
-- [Walk-Forward 教程](docs/WALK_FORWARD_TUTORIAL.md) - 滚动回测验证
-- [API 参考](docs/API_REFERENCE.md) - 完整 API 文档
-- [故障排除](docs/TROUBLESHOOTING.md) - 常见问题解决
-
----
-
-## 🧪 测试
-
-### 运行测试
-
-```bash
-# 因子测试
-pytest tests/test_factors.py -v
-
-# Review Agent 测试
-pytest tests/test_review.py -v
-
-# Walk-Forward 测试
-pytest tests/test_walk_forward.py -v
-
-# 系统完整性测试
-python tests/test_v43_system.py
-```
-
-### 测试覆盖
-
-| 模块 | 测试用例 | 状态 |
-|------|----------|------|
-| 因子库 | 16 个 | ✅ |
-| Review Agent | 5 个 | ✅ |
-| Walk-Forward | 8 个 | ✅ |
-| 系统完整性 | 10 个 | ✅ 70% |
-
----
-
-## 🔧 配置说明
-
-### 市场状态配置 (config/regime_config.json)
-
-```json
-{
-  "trend": {
-    "ADX_threshold": 25,
-    "ema_short": 10,
-    "ema_long": 20
-  },
-  "dynamic_thresholds": {
-    "TRENDING_UP": 0.08,
-    "RANGING": 0.15,
-    "HIGH_VOLATILITY": 0.20
-  }
-}
-```
-
-### 风控配置 (config/risk_params.json)
-
-```json
-{
-  "account": {
-    "min_margin_level": 200,
-    "max_daily_loss_percent": 0.03
-  },
-  "position": {
-    "max_positions": 3,
-    "risk_per_trade_percent": 0.005
-  }
-}
-```
-
----
-
-## 📊 性能监控
-
-### 实时监控
-
-- 每 60 分钟扫描市场
-- 自动生成交易信号
-- 实时风控检查
-- 自动记录日志
-
-### 每日报告
-
-- 20:00 自动生成
-- 核心指标统计
-- 归因分析
-- 问题识别
-- 改进建议
-
----
-
-## 🤝 贡献指南
-
-欢迎贡献代码、报告问题或提出建议！
-
-1. Fork 本仓库
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
-
----
-
-## 📄 开源协议
-
-本项目采用 MIT 协议 - 查看 [LICENSE](LICENSE) 文件了解详情。
-
----
-
-## 📞 联系方式
-
-- **项目主页**: [GitHub Repository](https://github.com/YOUR_USERNAME/V4.3-Quant-Trading-System)
-- **问题反馈**: [Issues](https://github.com/YOUR_USERNAME/V4.3-Quant-Trading-System/issues)
-
----
-
-## 🙏 致谢
-
-感谢以下开源项目：
-
-- MetaTrader 5 - 交易平台
-- pandas - 数据分析
-- numpy - 科学计算
-- pytest - 测试框架
-
----
-
-**V4.3 Development Team**  
-**2026-04-11**  
-**数据驱动，持续进化**
-
----
-
-*如果这个项目对你有帮助，请给一个 ⭐️ Star！*
+本系统仅供学习和研究使用，不构成投资建议。外汇交易具有风险，请谨慎操作。
