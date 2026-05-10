@@ -51,11 +51,11 @@ KELLY_REGISTRY = {
     'GBPUSD':  {'W': 0.52, 'R': 1.07, 'kf': 0.080},
     # 低 Kelly（kf 3-5%）：降级风险
     'EURUSD':  {'W': 0.35, 'R': 2.06, 'kf': 0.034},
-    # 负 Kelly（kf < 5%）：永久屏蔽
+    # 负 Kelly（kf < 0%）：Micro-Test 模式（小单重新调优验证）
     'NZDUSD':  {'W': 0.57, 'R': 0.25, 'kf': -1.129},
     'USDJPY':  {'W': 0.38, 'R': 0.41, 'kf': -1.138},
     'AUDJPY':  {'W': 0.20, 'R': 0.75, 'kf': -0.866},
-    'BTCUSD':  {'W': 0.25, 'R': 0.18, 'kf': -3.837},
+    'BTCUSD':  {'W': 0.25, 'R': 0.18, 'kf': -3.837},  # 加密货币永久屏蔽
 }
 
 TZ = timezone(timedelta(hours=8))
@@ -100,15 +100,51 @@ def get_kelly_quality(symbol):
         return 'low'
     return 'neg'
 
+def is_micro_test(symbol):
+    """负 Kelly 品种进入 Micro-Test 模式（小单重新调优验证）
+    BTCUSD 除外（加密货币永久禁止）
+    """
+    if symbol == 'BTCUSD':
+        return False  # 永久屏蔽
+    return get_kelly_quality(symbol) == 'neg'
+
 def kelly_filter(symbol):
-    """Kelly 过滤：负 Kelly 品种永久屏蔽"""
-    if get_kelly_quality(symbol) == 'neg':
-        info = KELLY_REGISTRY.get(symbol, {})
-        kf = info.get('kf', 0)
-        log("  [Kelly过滤] {} kf={:.1f}% < {:.0f}%（负期望，禁止）".format(
-            symbol, kf*100, KELLY_MIN_F*100))
+    """Kelly 过滤：
+    - 负 Kelly 品种 → Micro-Test 模式（允许但严格限制）
+    - BTCUSD → 永久屏蔽
+    """
+    if symbol == 'BTCUSD':
+        log("  [永久屏蔽] {} 加密货币禁止交易".format(symbol))
         return False
+
+    quality = get_kelly_quality(symbol)
+    if quality == 'neg':
+        kf = KELLY_REGISTRY.get(symbol, {}).get('kf', 0)
+        log("  [Micro-Test] {} kf={:.1f}% 进入小单重新验证模式".format(
+            symbol, kf*100))
     return True
+
+def get_kelly_lot_size(symbol, strength):
+    """Kelly 分档手数上限：
+    高Kelly(kf>10%) → SUPER 0.10 / STRONG 0.06
+    中Kelly(kf 5-10%) → SUPER 0.10 / STRONG 0.06
+    低Kelly(kf <5%) → SUPER 0.08 / STRONG 0.05
+    Micro-Test(负Kelly) → SUPER 0.02 / STRONG 0.02
+    """
+    quality = get_kelly_quality(symbol)
+    is_super = strength >= SUPER_SIGNAL*100
+
+    if is_micro_test(symbol):
+        return 0.02  # Micro-Test 一律最大 0.02 手
+
+    if quality == 'high':
+        return 0.10 if is_super else 0.06
+    elif quality == 'mid':
+        return 0.10 if is_super else 0.06
+    elif quality == 'low':
+        return 0.08 if is_super else 0.05
+    else:
+        return 0.05  # 默认保守
 
 def calc_expected_value(symbol, direction, strength):
     """计算预期值 EV = p*b - q（Kelly核心公式）
@@ -126,6 +162,13 @@ def calc_expected_value(symbol, direction, strength):
 
 def get_risk_pct(symbol, strength):
     """决定本笔交易的风险百分比"""
+    # Micro-Test 模式：极低风险
+    if is_micro_test(symbol):
+        risk_pct = 0.0005  # 0.05%（每笔最多 $5）
+        log("  [Micro-Test] {} 极低风险 {:.1f}%".format(
+            symbol, risk_pct*100))
+        return risk_pct
+
     risk_pct = RISK_PCT_SUPER if strength >= SUPER_SIGNAL*100 else RISK_PCT_STRONG
     # 高 Kelly 品种 + SUPER 信号 → 可提升至双倍风险
     if get_kelly_quality(symbol) == 'high' and strength >= SUPER_SIGNAL*100:
@@ -286,13 +329,16 @@ def execute(symbol, direction, strength):
     info = mt5.account_info()
     risk_amt = info.balance * risk_pct
 
-    # Step 5: 手数 = 风险金额 / (SL pips * pip价值)
+    # Step 5: 手数 = min(风险金额手数, Kelly分档上限)
     if pip_value > 0 and sl_pips > 0:
         raw_lots = risk_amt / (sl_pips * pip_value)
-        # 最小0.01手
-        lots = round(max(0.01, raw_lots), 2)
     else:
-        lots = 0.01
+        raw_lots = 0.01
+
+    # Kelly 分档上限
+    kelly_max_lot = get_kelly_lot_size(symbol, strength)
+    lots = round(min(raw_lots, kelly_max_lot), 2)
+    lots = max(0.01, lots)  # 最小0.01手
 
     # Step 6: 盈亏比校验
     rr_ratio = tp_pips / sl_pips if sl_pips > 0 else 0
@@ -312,7 +358,10 @@ def execute(symbol, direction, strength):
 
     quality = get_kelly_quality(symbol)
     kf = KELLY_REGISTRY.get(symbol, {}).get('kf', 0)
-    kf_tag = {'high': 'Kelly高', 'mid': 'Kelly中', 'low': 'Kelly低', 'neg': 'Kelly负'}.get(quality, '')
+    if is_micro_test(symbol):
+        kf_tag = 'Micro-Test'
+    else:
+        kf_tag = {'high': 'Kelly高', 'mid': 'Kelly中', 'low': 'Kelly低', 'neg': 'Kelly负'}.get(quality, '')
     tier_tag = 'SUPER' if strength >= SUPER_SIGNAL*100 else 'STRONG'
 
     order_type = mt5.ORDER_TYPE_BUY if direction == "BUY" else mt5.ORDER_TYPE_SELL
@@ -326,7 +375,7 @@ def execute(symbol, direction, strength):
         "tp": tp_price,
         "deviation": 50,
         "magic": 240501,
-        "comment": "Patrol Smart v5.1",
+        "comment": "Patrol Smart v5.2",
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
@@ -365,7 +414,7 @@ def recently_traded(symbol, hours=2):
             for d in deals:
                 if d.symbol == symbol and d.comment in (
                     'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1',
-                    'Patrol Auto', 'FORCE_CLOSE'):
+                    'Patrol Smart v5.2', 'Patrol Auto', 'FORCE_CLOSE'):
                     return True
     except:
         pass
@@ -377,7 +426,7 @@ def trades_this_hour():
         from_time = to_time - 3600
         deals = mt5.history_deals_get(from_time, to_time)
         return sum(1 for d in deals if d.comment in (
-            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Auto')
+            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.2', 'Patrol Auto')
             and d.entry in (0,1))
     except:
         return 0
@@ -386,7 +435,7 @@ def trades_this_hour():
 
 def run():
     log("=" * 60)
-    log("30min Patrol - v5.1 Kelly Criterion版")
+    log("30min Patrol - v5.2 Kelly+Micro-Test版")
     log("=" * 60)
     info = mt5_connect()
     if not info:
@@ -423,16 +472,20 @@ def run():
 
         direction, strength = calculate_signal_v3(sym_name)
 
-        # 信号强度过滤：<45% 不开仓
-        if direction and strength < SIGNAL_MIN * 100:
-            log(f"  {sym_name}: 信号{strength:.1f}% < {SIGNAL_MIN*100:.0f}%，跳过")
+        # 信号强度过滤：Micro-Test 70%+，普通品种 45%+
+        min_signal = 70 if is_micro_test(sym_name) else SIGNAL_MIN * 100
+        if direction and strength < min_signal:
+            log(f"  {sym_name}: 信号{strength:.1f}% < {min_signal:.0f}%{'(Micro-Test门槛)' if is_micro_test(sym_name) else ''}，跳过")
             continue
 
         quality = get_kelly_quality(sym_name)
         jpy_tag = "[JPY]" if is_jpy(sym_name) else ""
         metal_tag = "[GOLD]" if is_precious_metal(sym_name) else ""
         tag = metal_tag or jpy_tag or ""
-        kf_tag = {'high': '[Kelly高]', 'mid': '[Kelly中]', 'low': '[Kelly低]'}.get(quality, '')
+        if is_micro_test(sym_name):
+            kf_tag = '[Micro-Test]'
+        else:
+            kf_tag = {'high': '[Kelly高]', 'mid': '[Kelly中]', 'low': '[Kelly低]'}.get(quality, '')
         tier = 'SUPER' if strength >= SUPER_SIGNAL*100 else 'STRONG' if strength >= 45 else 'LOW'
         log(f"  {sym_name} {tag} {kf_tag}: {direction or 'NEUTRAL'} {strength:.1f}% [{tier}]")
 
