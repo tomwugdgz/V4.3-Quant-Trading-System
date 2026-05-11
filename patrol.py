@@ -27,7 +27,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='repla
 ACCOUNT = 52797683
 SERVER = "ICMarketsSC-Demo"
 
-# ========== v5.1 核心参数 ==========
+# ========== v5.3 核心参数 ==========
 SIGNAL_MIN = 0.45           # 信号强度门槛 45%（<45%不开仓）
 SUPER_SIGNAL = 0.60        # SUPER 信号门槛 60%
 RISK_PCT_SUPER = 0.005     # 60%+ 信号：0.5% 风险
@@ -37,6 +37,9 @@ KELLY_MIN_F = 0.05         # Kelly f* < 5% 品种永久屏蔽
 MAX_POS = 3
 MAX_TRADES_PER_HOUR = 1
 CORRELATION_COOLDOWN_H = 2
+SL_COOLDOWN_H = 4           # 止损后同品种4小时冷却
+DAILY_LOSS_LIMIT = 50       # 单日亏损上限 $50
+SL_BUFFER_PIPS = 5          # 止损缓冲 +5pip（防假突破）
 
 # ========== Kelly 品种注册表（基于217笔历史统计） ==========
 # W = 历史胜率 | R = 平均赢/平均亏 | kf = Kelly f*
@@ -193,14 +196,15 @@ def calc_atr(symbol, tf=mt5.TIMEFRAME_H1, period=14):
 
 def get_dynamic_sl_tp(symbol):
     """动态止损止盈
-    JPY: ATR*2.0（最低20pip）
-    贵金属: ATR*1.5（最低50pip）
-    其他: ATR*1.5（最低15pip）
+    v5.2 优化：增加 SL_BUFFER_PIPS 缓冲（防假突破）
+    JPY: ATR*2.0 + 缓冲（最低20pip）
+    贵金属: ATR*1.5 + 缓冲（最低50pip）
+    其他: ATR*1.5 + 缓冲（最低15pip）
     TP = SL * 2.0
     """
     atr = calc_atr(symbol)
     if atr is None:
-        return 15, 30, 5, 0.00001, 10000
+        return 15 + SL_BUFFER_PIPS, 40, 5, 0.00001, 10000
 
     sym = mt5.symbol_info(symbol)
     digits = sym.digits
@@ -209,20 +213,20 @@ def get_dynamic_sl_tp(symbol):
     if is_precious_metal(symbol):
         pip_size = 0.01
         atr_pips = atr / pip_size
-        sl_pips = max(atr_pips * 1.5, 50)
+        sl_pips = max(atr_pips * 1.5 + SL_BUFFER_PIPS, 50)
         tp_pips = sl_pips * 2.0
         pip_div = 0.01
     elif is_jpy(symbol):
         pip_div = 100
         pip_size = point * 10
         atr_pips = atr / pip_size
-        sl_pips = max(atr_pips * 2.0, 20)
+        sl_pips = max(atr_pips * 2.0 + SL_BUFFER_PIPS, 20)
         tp_pips = sl_pips * 2.0
     else:
         pip_div = 10000
         pip_size = point * 10 if digits in (3, 5) else point
         atr_pips = atr / pip_size
-        sl_pips = max(atr_pips * 1.5, 15)
+        sl_pips = max(atr_pips * 1.5 + SL_BUFFER_PIPS, 15)
         tp_pips = sl_pips * 2.0
 
     log(f"  ATR={atr:.5f} | SL={sl_pips:.1f}pips | TP={tp_pips:.1f}pips")
@@ -431,11 +435,43 @@ def trades_this_hour():
     except:
         return 0
 
+def symbol_hit_sl_recently(symbol, hours=SL_COOLDOWN_H):
+    """检查品种是否在冷却期内（止损后4小时内不开新仓）"""
+    try:
+        to_time = int(datetime.now().timestamp())
+        from_time = to_time - hours * 3600
+        deals = mt5.history_deals_get(from_time, to_time)
+        if deals:
+            for d in deals:
+                if d.symbol == symbol and d.entry == 1 and d.profit < 0:
+                    comment = d.comment or ''
+                    if 'sl' in comment.lower() or d.profit < -(d.volume * 5):
+                        t = datetime.fromtimestamp(d.time, TZ).strftime('%H:%M')
+                        log("  [品种冷却] {} {}止损@{}，{}h内不开新仓".format(
+                            symbol, t, comment, hours))
+                        return True
+    except:
+        pass
+    return False
+
+def get_daily_pnl():
+    """获取今日净盈亏"""
+    try:
+        today_start = datetime.now(TZ).replace(hour=0, minute=0, second=0, microsecond=0)
+        today_ts = int(today_start.timestamp())
+        to_ts = int(datetime.now(TZ).timestamp())
+        history = mt5.history_deals_get(today_ts, to_ts) or []
+        closes = [d for d in history if d.entry == 1]
+        total = sum(d.profit + d.swap + d.commission for d in closes)
+        return total
+    except:
+        return 0
+
 # ========== 主程序 ==========
 
 def run():
     log("=" * 60)
-    log("30min Patrol - v5.2 Kelly+Micro-Test版")
+    log("30min Patrol - v5.3 日内风控版")
     log("=" * 60)
     info = mt5_connect()
     if not info:
@@ -457,6 +493,15 @@ def run():
         log(f"[v5频率] 本小时已开{MAX_TRADES_PER_HOUR}单，跳过")
         mt5.shutdown()
         return
+
+    # v5.2 新增：每日亏损上限检查
+    daily_pnl = get_daily_pnl()
+    if daily_pnl < -DAILY_LOSS_LIMIT:
+        log(f"[日内亏损限制] 今日已亏${daily_pnl:.2f}，超过${DAILY_LOSS_LIMIT}上限，停止交易")
+        mt5.shutdown()
+        return
+    elif daily_pnl < 0:
+        log(f"[日内亏损] 今日已亏${daily_pnl:.2f}（上限${DAILY_LOSS_LIMIT}）")
 
     log("扫描市场...")
     results = []
@@ -514,6 +559,12 @@ def run():
 
     if recently_traded(best_sym, hours=CORRELATION_COOLDOWN_H):
         log(f"[冷却] {best_sym} 最近{CORRELATION_COOLDOWN_H}h有交易，跳过")
+        mt5.shutdown()
+        return
+
+    # v5.2 新增：品种止损冷却检查
+    if symbol_hit_sl_recently(best_sym):
+        log(f"[品种冷却] {best_sym} 近期止损，跳过")
         mt5.shutdown()
         return
 
