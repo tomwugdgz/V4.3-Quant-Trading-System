@@ -27,33 +27,37 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='repla
 ACCOUNT = 52797683
 SERVER = "ICMarketsSC-Demo"
 
-# ========== v5.3 核心参数 ==========
+# ========== v5.4 全链路优化版 ==========
 SIGNAL_MIN = 0.45           # 信号强度门槛 45%（<45%不开仓）
 SUPER_SIGNAL = 0.60        # SUPER 信号门槛 60%
 RISK_PCT_SUPER = 0.005     # 60%+ 信号：0.5% 风险
 RISK_PCT_STRONG = 0.003     # 45-60% 信号：0.3% 风险
 KELLY_BOOST_MULT = 2.0      # 高Kelly品种（kf>10%）可双倍风险
-KELLY_MIN_F = 0.05         # Kelly f* < 5% 品种永久屏蔽
+KELLY_MIN_TRADE = 0.10     # Kelly f* < 10% 品种禁止交易（来福P0建议）
 MAX_POS = 3
 MAX_TRADES_PER_HOUR = 1
 CORRELATION_COOLDOWN_H = 2
 SL_COOLDOWN_H = 4           # 止损后同品种4小时冷却
 DAILY_LOSS_LIMIT = 50       # 单日亏损上限 $50
-SL_BUFFER_PIPS = 5          # 止损缓冲 +5pip（防假突破）
+CONSECUTIVE_LOSS_REDUCE = 2 # 连亏2次后仓位减半
+ATR_SL_MULT = {'jpy': 2.0, 'metal': 1.5, 'default': 1.5}  # ATR倍数
+ATR_SL_BUFFER_MULT = 0.5   # 止损缓冲 = ATR × 0.5（动态，非固定5pip）
 
 # ========== Kelly 品种注册表（基于217笔历史统计） ==========
 # W = 历史胜率 | R = 平均赢/平均亏 | kf = Kelly f*
-# kf < 5% → 永久屏蔽 | kf 5-10% → 标准风险 | kf > 10% → 可提升风险
+# kf < 10% → 禁止交易（来福P0建议） | kf >= 10% → 可交易
 KELLY_REGISTRY = {
-    # 高 Kelly（kf > 10%）：双倍风险权限
+    # 高 Kelly（kf > 10%）：优先交易
     'USDCAD':  {'W': 0.71, 'R': 0.97, 'kf': 0.420},
     'XAUUSD':  {'W': 1.00, 'R': 3.00, 'kf': 0.500},  # 2w/0l，极端高期望
     # 中 Kelly（kf 5-10%）：标准风险
     'AUDUSD':  {'W': 0.62, 'R': 0.71, 'kf': 0.094},
     'USDCHF':  {'W': 0.57, 'R': 0.90, 'kf': 0.085},
     'GBPUSD':  {'W': 0.52, 'R': 1.07, 'kf': 0.080},
-    # 低 Kelly（kf 3-5%）：降级风险
+    # 低 Kelly（kf 3-5%）：v5.4禁止交易（来福P0）
     'EURUSD':  {'W': 0.35, 'R': 2.06, 'kf': 0.034},
+    # 未注册品种：v5.4禁止交易（来福P0）
+    # EURCAD, EURGBP, GBPAUD, NZDJPY, CADJPY, CHFJPY, XAGUSD — 不在注册表，不开仓
     # 负 Kelly（kf < 0%）：Micro-Test 模式（小单重新调优验证）
     'NZDUSD':  {'W': 0.57, 'R': 0.25, 'kf': -1.129},
     'USDJPY':  {'W': 0.38, 'R': 0.41, 'kf': -1.138},
@@ -90,42 +94,69 @@ def is_precious_metal(symbol):
 # ========== Kelly 核心函数 ==========
 
 def get_kelly_quality(symbol):
-    """返回 Kelly 质量: 'high'(kf>10%) / 'mid'(5-10%) / 'low'(<5%) / 'neg'"""
+    """返回 Kelly 质量: 'high'(kf>10%) / 'mid'(5-10%) / 'low'(<5%) / 'neg' / 'unreg'(未注册)"""
     info = KELLY_REGISTRY.get(symbol)
     if info is None:
-        return 'mid'
+        return 'unreg'  # v5.4: 未注册品种
     kf = info['kf']
     if kf > 0.10:
         return 'high'
-    elif kf >= KELLY_MIN_F:
+    elif kf >= 0.05:
         return 'mid'
     elif kf > 0:
         return 'low'
     return 'neg'
 
-def is_micro_test(symbol):
-    """负 Kelly 品种进入 Micro-Test 模式（小单重新调优验证）
-    BTCUSD 除外（加密货币永久禁止）
-    """
-    if symbol == 'BTCUSD':
-        return False  # 永久屏蔽
-    return get_kelly_quality(symbol) == 'neg'
-
 def kelly_filter(symbol):
-    """Kelly 过滤：
-    - 负 Kelly 品种 → Micro-Test 模式（允许但严格限制）
+    """Kelly 过滤 v5.4:
+    - 未注册品种 → 禁止
+    - 负 Kelly 品种 → Micro-Test 模式
     - BTCUSD → 永久屏蔽
+    - Kelly < 10% → 禁止交易（来福P0）
     """
     if symbol == 'BTCUSD':
         log("  [永久屏蔽] {} 加密货币禁止交易".format(symbol))
         return False
 
     quality = get_kelly_quality(symbol)
+
+    if quality == 'unreg':
+        log("  [未注册] {} 不在Kelly注册表，禁止开仓".format(symbol))
+        return False
+
+    kf = KELLY_REGISTRY.get(symbol, {}).get('kf', 0)
+    if kf < KELLY_MIN_TRADE:
+        log("  [Kelly过滤] {} kf={:.1f}% < {:.0f}%，禁止交易".format(
+            symbol, kf*100, KELLY_MIN_TRADE*100))
+        return False
+
     if quality == 'neg':
-        kf = KELLY_REGISTRY.get(symbol, {}).get('kf', 0)
         log("  [Micro-Test] {} kf={:.1f}% 进入小单重新验证模式".format(
             symbol, kf*100))
     return True
+
+def is_micro_test(symbol):
+    """负 Kelly 品种进入 Micro-Test 模式"""
+    quality = get_kelly_quality(symbol)
+    return quality == 'neg' and symbol != 'BTCUSD'
+
+def get_consecutive_losses():
+    """获取连续亏损次数（最近3天）"""
+    try:
+        to_time = int(datetime.now(TZ).timestamp())
+        from_time = to_time - 86400 * 3
+        history = mt5.history_deals_get(from_time, to_time) or []
+        closes = [d for d in history if d.entry == 1]
+        consecutive = 0
+        for d in sorted(closes, key=lambda x: x.time, reverse=True):
+            pnl = d.profit + d.swap + d.commission
+            if pnl < 0:
+                consecutive += 1
+            else:
+                break
+        return consecutive
+    except:
+        return 0
 
 def get_kelly_lot_size(symbol, strength):
     """Kelly 分档手数上限：
@@ -195,38 +226,42 @@ def calc_atr(symbol, tf=mt5.TIMEFRAME_H1, period=14):
     return tr.rolling(period).mean().iloc[-1]
 
 def get_dynamic_sl_tp(symbol):
-    """动态止损止盈
-    v5.2 优化：增加 SL_BUFFER_PIPS 缓冲（防假突破）
-    JPY: ATR*2.0 + 缓冲（最低20pip）
-    贵金属: ATR*1.5 + 缓冲（最低50pip）
-    其他: ATR*1.5 + 缓冲（最低15pip）
+    """动态止损止盈 v5.4
+    止损缓冲 = ATR × 0.5（动态，非固定5pip，来福P1建议）
+    JPY: ATR*2.0 + ATR*0.5缓冲（最低20pip）
+    贵金属: ATR*1.5 + ATR*0.5缓冲（最低50pip）
+    其他: ATR*1.5 + ATR*0.5缓冲（最低15pip）
     TP = SL * 2.0
     """
     atr = calc_atr(symbol)
     if atr is None:
-        return 15 + SL_BUFFER_PIPS, 40, 5, 0.00001, 10000
+        return 20, 40, 5, 0.00001, 10000
 
     sym = mt5.symbol_info(symbol)
     digits = sym.digits
     point = sym.point
 
+    # 缓冲 = ATR × 0.5（动态自适应）
     if is_precious_metal(symbol):
         pip_size = 0.01
         atr_pips = atr / pip_size
-        sl_pips = max(atr_pips * 1.5 + SL_BUFFER_PIPS, 50)
+        buffer_pips = atr_pips * ATR_SL_BUFFER_MULT
+        sl_pips = max(atr_pips * ATR_SL_MULT['metal'] + buffer_pips, 50)
         tp_pips = sl_pips * 2.0
         pip_div = 0.01
     elif is_jpy(symbol):
         pip_div = 100
         pip_size = point * 10
         atr_pips = atr / pip_size
-        sl_pips = max(atr_pips * 2.0 + SL_BUFFER_PIPS, 20)
+        buffer_pips = atr_pips * ATR_SL_BUFFER_MULT
+        sl_pips = max(atr_pips * ATR_SL_MULT['jpy'] + buffer_pips, 20)
         tp_pips = sl_pips * 2.0
     else:
         pip_div = 10000
         pip_size = point * 10 if digits in (3, 5) else point
         atr_pips = atr / pip_size
-        sl_pips = max(atr_pips * 1.5 + SL_BUFFER_PIPS, 15)
+        buffer_pips = atr_pips * ATR_SL_BUFFER_MULT
+        sl_pips = max(atr_pips * ATR_SL_MULT['default'] + buffer_pips, 15)
         tp_pips = sl_pips * 2.0
 
     log(f"  ATR={atr:.5f} | SL={sl_pips:.1f}pips | TP={tp_pips:.1f}pips")
@@ -299,7 +334,36 @@ def calculate_signal_v3(symbol):
     except:
         return None, 0
 
-# ========== 执行开仓（v5.1 Kelly版）============
+def detect_market_state(symbol):
+    """检测市场状态：趋势 vs 震荡
+    返回 'trending' 或 'ranging'
+    来福P2建议：震荡市不追趋势
+    """
+    try:
+        h4 = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H4, 0, 50)
+        if h4 is None or len(h4) < 30:
+            return 'trending'  # 默认趋势
+        df = pd.DataFrame(h4)
+        # ADX < 20 = 震荡
+        hi, lo, cl = df['high'], df['low'], df['close']
+        tr1 = hi - lo
+        tr2 = abs(hi - cl.shift(1))
+        tr3 = abs(lo - cl.shift(1))
+        tr = np.maximum(np.maximum(tr1, tr2), tr3)
+        atr_h4 = tr.rolling(14).mean()
+        plus_dm = hi.diff().clip(lower=0)
+        minus_dm = (-lo.diff()).clip(upper=0)
+        plus_di = 100 * plus_dm.rolling(14).mean() / atr_h4.replace(0, np.nan)
+        minus_di = 100 * minus_dm.rolling(14).mean() / atr_h4.replace(0, np.nan)
+        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di).replace(0, np.nan)
+        adx = dx.rolling(14).mean().iloc[-1]
+        if adx < 20:
+            return 'ranging'
+        return 'trending'
+    except:
+        return 'trending'
+
+# ========== 执行开仓（v5.4 全链路优化版）============
 
 def execute(symbol, direction, strength):
     """执行开仓：Kelly风险决策 + 预期值校验 + 手数倒推"""
@@ -311,6 +375,17 @@ def execute(symbol, direction, strength):
     if not calc_expected_value(symbol, direction, strength):
         log("  [Kelly EV拒绝] {} 预期值<=0，跳过".format(symbol))
         return False
+
+    # v5.4: 市场状态检查
+    market_state = detect_market_state(symbol)
+    if market_state == 'ranging':
+        log("  [市场状态] {} 震荡市，趋势策略跳过".format(symbol))
+        return False
+
+    # v5.4: 连续亏损仓位降级
+    cons_losses = get_consecutive_losses()
+    if cons_losses >= CONSECUTIVE_LOSS_REDUCE:
+        log("  [连亏降级] 连续{}次亏损，仓位减半".format(cons_losses))
 
     tick = mt5.symbol_info_tick(symbol)
     sym = mt5.symbol_info(symbol)
@@ -342,6 +417,11 @@ def execute(symbol, direction, strength):
     # Kelly 分档上限
     kelly_max_lot = get_kelly_lot_size(symbol, strength)
     lots = round(min(raw_lots, kelly_max_lot), 2)
+
+    # v5.4: 连亏仓位减半
+    if cons_losses >= CONSECUTIVE_LOSS_REDUCE:
+        lots = round(lots * 0.5, 2)
+
     lots = max(0.01, lots)  # 最小0.01手
 
     # Step 6: 盈亏比校验
@@ -379,7 +459,7 @@ def execute(symbol, direction, strength):
         "tp": tp_price,
         "deviation": 50,
         "magic": 240501,
-        "comment": "Patrol Smart v5.2",
+        "comment": "Patrol Smart v5.4",
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
@@ -418,7 +498,7 @@ def recently_traded(symbol, hours=2):
             for d in deals:
                 if d.symbol == symbol and d.comment in (
                     'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1',
-                    'Patrol Smart v5.2', 'Patrol Auto', 'FORCE_CLOSE'):
+                    'Patrol Smart v5.2', 'Patrol Smart v5.4', 'Patrol Auto', 'FORCE_CLOSE'):
                     return True
     except:
         pass
@@ -430,7 +510,7 @@ def trades_this_hour():
         from_time = to_time - 3600
         deals = mt5.history_deals_get(from_time, to_time)
         return sum(1 for d in deals if d.comment in (
-            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.2', 'Patrol Auto')
+            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.2', 'Patrol Smart v5.4', 'Patrol Auto')
             and d.entry in (0,1))
     except:
         return 0
@@ -471,7 +551,7 @@ def get_daily_pnl():
 
 def run():
     log("=" * 60)
-    log("30min Patrol - v5.3 日内风控版")
+    log("30min Patrol - v5.4 全链路优化版")
     log("=" * 60)
     info = mt5_connect()
     if not info:
