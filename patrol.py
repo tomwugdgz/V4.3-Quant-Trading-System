@@ -42,27 +42,21 @@ DAILY_LOSS_LIMIT = 50       # 单日亏损上限 $50
 CONSECUTIVE_LOSS_REDUCE = 2 # 连亏2次后仓位减半
 ATR_SL_MULT = {'jpy': 2.0, 'metal': 1.5, 'default': 1.5}  # ATR倍数
 ATR_SL_BUFFER_MULT = 0.5   # 止损缓冲 = ATR × 0.5（动态，非固定5pip）
+TP_SL_RATIO = 1.5           # v5.5 TP:SL = 1:1.5
 
 # ========== Kelly 品种注册表（基于217笔历史统计） ==========
 # W = 历史胜率 | R = 平均赢/平均亏 | kf = Kelly f*
 # kf < 10% → 禁止交易（来福P0建议） | kf >= 10% → 可交易
 KELLY_REGISTRY = {
-    # 高 Kelly（kf > 10%）：优先交易
-    'USDCAD':  {'W': 0.71, 'R': 0.87, 'kf': 0.388},
-    'XAUUSD':  {'W': 1.00, 'R': 3.00, 'kf': 0.500},  # 2w/0l，极端高期望
-    # 中 Kelly（kf 5-10%）：标准风险
-    'AUDUSD':  {'W': 0.62, 'R': 0.67, 'kf': 0.067},
-    'USDCHF':  {'W': 0.57, 'R': 0.85, 'kf': 0.057},
-    'GBPUSD':  {'W': 0.52, 'R': 1.03, 'kf': 0.061},
-    # 低 Kelly（kf 3-5%）：v5.5禁止交易（来福P0）
-    'EURUSD':  {'W': 0.35, 'R': 2.06, 'kf': 0.034},
-    # 未注册品种：v5.5禁止交易（来福P0）
-    # EURCAD, EURGBP, GBPAUD, NZDJPY, CADJPY, CHFJPY, XAGUSD — 不在注册表，不开仓
-    # 负 Kelly（kf < 0%）：Micro-Test 模式（小单重新调优验证）
-    'NZDUSD':  {'W': 0.57, 'R': 0.25, 'kf': -1.129},
-    'USDJPY':  {'W': 0.38, 'R': 0.41, 'kf': -1.138},
-    'AUDJPY':  {'W': 0.20, 'R': 0.75, 'kf': -0.866},
-    'BTCUSD':  {'W': 0.25, 'R': 0.18, 'kf': -3.837},  # 加密货币永久屏蔽
+    # 正 EV 品种（基于真实 MT5 数据 221 笔）
+    # === 核心交易品种 ===
+    'USDCAD':  {'W': 0.71, 'R': 0.87, 'kf': 0.388},  # 7笔 +$14.21 EV=0.339
+    'AUDUSD':  {'W': 0.62, 'R': 0.67, 'kf': 0.067},  # 48笔 +$40.61 EV=0.045
+    'USDCHF':  {'W': 0.57, 'R': 0.85, 'kf': 0.057},  # 37笔 +$28.91 EV=0.049
+    'GBPUSD':  {'W': 0.52, 'R': 1.03, 'kf': 0.061},  # 21笔 +$19.98 EV=0.063
+    # === Micro-Test 品种（小单累积数据）===
+    'XAUUSD':  {'W': 1.00, 'R': 3.00, 'kf': 0.500},  # 2笔 +$396 样本不足 Micro-Test
+    # 永久禁止（负 EV）: EURUSD/NZDUSD/USDJPY/AUDJPY/BTCUSD/AUDCHF
 }
 
 TZ = timezone(timedelta(hours=8))
@@ -459,7 +453,7 @@ def execute(symbol, direction, strength):
         "tp": tp_price,
         "deviation": 50,
         "magic": 240501,
-        "comment": "Patrol Smart v5.5",
+        "comment": "Patrol Smart v5.6",
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
@@ -498,7 +492,7 @@ def recently_traded(symbol, hours=2):
             for d in deals:
                 if d.symbol == symbol and d.comment in (
                     'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1',
-                    'Patrol Smart v5.5', 'Patrol Smart v5.5', 'Patrol Auto', 'FORCE_CLOSE'):
+                    'Patrol Smart v5.6', 'Patrol Smart v5.6', 'Patrol Auto', 'FORCE_CLOSE'):
                     return True
     except:
         pass
@@ -510,7 +504,7 @@ def trades_this_hour():
         from_time = to_time - 3600
         deals = mt5.history_deals_get(from_time, to_time)
         return sum(1 for d in deals if d.comment in (
-            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.5', 'Patrol Smart v5.5', 'Patrol Auto')
+            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.6', 'Patrol Smart v5.6', 'Patrol Auto')
             and d.entry in (0,1))
     except:
         return 0
@@ -551,7 +545,7 @@ def get_daily_pnl():
 
 def run():
     log("=" * 60)
-    log("30min Patrol - v5.5 第一性原理版")
+    log("30min Patrol - v5.6 累积优化版")
     log("=" * 60)
     info = mt5_connect()
     if not info:
