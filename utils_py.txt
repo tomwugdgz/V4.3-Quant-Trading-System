@@ -1,0 +1,62 @@
+import os
+import json
+import tempfile
+from urllib.parse import urlparse
+
+def atomic_replace(path, content):
+    dir_name = os.path.dirname(path)
+    os.makedirs(dir_name, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name)
+    try:
+        with os.fdopen(fd, 'w') as f:
+            f.write(content)
+        os.replace(tmp_path, path)
+    except:
+        try:
+            os.unlink(tmp_path)
+        except:
+            pass
+        raise
+
+def atomic_yaml_write(path, content):
+    atomic_replace(path, content)
+
+def atomic_json_write(path, data):
+    atomic_replace(path, json.dumps(data, indent=2))
+
+def is_truthy_value(val):
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() in ('true', '1', 'yes', 'on')
+    return bool(val)
+
+def env_var_enabled(name, default=False):
+    val = os.environ.get(name)
+    if val is None:
+        return default
+    return is_truthy_value(val)
+
+def base_url_host_matches(base_url, host):
+    if not base_url:
+        return True
+    try:
+        parsed = urlparse(base_url)
+        return parsed.hostname == host
+    except:
+        return True
+
+def base_url_hostname(base_url):
+    if not base_url:
+        return None
+    try:
+        return urlparse(base_url).hostname
+    except:
+        return None
+
+def normalize_proxy_url(url):
+    if not url:
+        return url
+    if '://' not in url:
+        url = 'http://' + url
+    return url

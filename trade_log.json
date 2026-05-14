@@ -1,0 +1,244 @@
+{
+  "trades": [
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T06:06:12.612127",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T14:06:04.594873",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T15:00:11.427199",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T17:06:04.418803",
+      "symbol": "XAUUSD",
+      "direction": "CLOSE",
+      "reason": "盈利达标：+34400.0 pips ($+3.44)"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T17:40:13.381518",
+      "symbol": "USDCHF",
+      "direction": "CLOSE",
+      "reason": "盈利达标：+11.1 pips ($+16.86)"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T17:40:21.647090",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T19:40:11.721045",
+      "symbol": "AUDUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T19:46:03.998040",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T20:40:37.351830",
+      "symbol": "GBPUSD",
+      "direction": "CLOSE",
+      "reason": "盈利达标：+10.9 pips ($+8.72)"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T20:40:37.932792",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T21:41:03.799001",
+      "symbol": "AUDUSD",
+      "direction": "CLOSE",
+      "reason": "盈利达标：+14.3 pips ($+11.44)"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T23:06:04.243052",
+      "symbol": "EURUSD",
+      "direction": "CLOSE",
+      "reason": "盈利达标：+12.8 pips ($+10.24)"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T23:20:09.185091",
+      "symbol": "USDCHF",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-28",
+      "time": "2026-04-28T23:40:10.060429",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-29",
+      "time": "2026-04-29T07:00:47.640587",
+      "symbol": "AUDUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-29",
+      "time": "2026-04-29T11:06:03.532639",
+      "symbol": "USDJPY",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-29",
+      "time": "2026-04-29T14:26:04.165070",
+      "symbol": "USDJPY",
+      "direction": "CLOSE",
+      "reason": "盈利达标：+11.9 pips ($+5.96)"
+    },
+    {
+      "date": "2026-04-29",
+      "time": "2026-04-29T16:26:03.931599",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-29",
+      "time": "2026-04-29T21:21:07.107852",
+      "symbol": "USDCHF",
+      "direction": "CLOSE",
+      "reason": "盈利达标：+13.0 pips ($+13.15)"
+    },
+    {
+      "date": "2026-04-29",
+      "time": "2026-04-29T21:46:11.588235",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-29",
+      "time": "2026-04-29T23:46:22.954407",
+      "symbol": "GBPUSD",
+      "direction": "CLOSE",
+      "reason": "盈利达标：+13.2 pips ($+10.56)"
+    },
+    {
+      "date": "2026-04-29",
+      "time": "2026-04-29T23:46:39.162007",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-30",
+      "time": "2026-04-30T01:00:54.627694",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-30",
+      "time": "2026-04-30T03:02:05.019766",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-30",
+      "time": "2026-04-30T07:46:04.096606",
+      "symbol": "GBPUSD",
+      "direction": "CLOSE",
+      "reason": "盈利达标：+15.7 pips ($+12.56)"
+    },
+    {
+      "date": "2026-04-30",
+      "time": "2026-04-30T08:26:06.232467",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-30",
+      "time": "2026-04-30T15:20:10.361713",
+      "symbol": "AUDUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-30",
+      "time": "2026-04-30T15:40:21.024845",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-30",
+      "time": "2026-04-30T16:00:56.702516",
+      "symbol": "USDJPY",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-04-30",
+      "time": "2026-04-30T16:40:13.836604",
+      "symbol": "USDJPY",
+      "direction": "BUY",
+      "reason": "signal_open"
+    },
+    {
+      "date": "2026-05-01",
+      "time": "2026-05-01T12:30:55.030997",
+      "symbol": "EURUSD",
+      "direction": "BUY",
+      "reason": "signal 0.750%"
+    },
+    {
+      "date": "2026-05-01",
+      "time": "2026-05-01T12:30:55.842560",
+      "symbol": "NZDUSD",
+      "direction": "BUY",
+      "reason": "signal 0.750%"
+    },
+    {
+      "date": "2026-05-01",
+      "time": "2026-05-01T12:30:56.591946",
+      "symbol": "GBPUSD",
+      "direction": "BUY",
+      "reason": "signal 0.562%"
+    }
+  ],
+  "last_close_time": {
+    "USDJPY": "2026-04-29T14:26:04.163694",
+    "USDCHF": "2026-04-29T21:21:07.103463",
+    "NZDUSD": "2026-04-23T19:06:02.596407",
+    "GBPUSD": "2026-04-30T07:46:04.087241",
+    "XAUUSD": "2026-04-28T17:06:04.418803",
+    "AUDUSD": "2026-04-28T21:41:03.799001",
+    "EURUSD": "2026-04-28T23:06:04.240436"
+  }
+}

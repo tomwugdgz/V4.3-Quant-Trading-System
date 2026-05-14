@@ -1,0 +1,37 @@
+{
+  "date": "2026-05-13",
+  "balance": 9735.3,
+  "equity": 9726.66,
+  "daily_pnl": -14.6,
+  "wins": 0,
+  "losses": 1,
+  "total_return_pct": -2.65,
+  "positions": [
+    {
+      "symbol": "EURCAD",
+      "direction": "BUY",
+      "volume": 0.1,
+      "entry": 1.60872,
+      "sl": 1.6063,
+      "tp": 1.61357,
+      "floating_pnl": -8.4
+    }
+  ],
+  "trades_today": [
+    {
+      "time": "03:50",
+      "symbol": "EURCAD",
+      "action": "open",
+      "direction": "BUY",
+      "volume": 0.1,
+      "price": 1.60872
+    },
+    {
+      "time": "00:20",
+      "symbol": "EURUSD",
+      "action": "close",
+      "direction": "SELL",
+      "pnl": -14.6
+    }
+  ]
+}

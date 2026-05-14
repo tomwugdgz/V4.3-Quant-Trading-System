@@ -1,0 +1,22 @@
+旺财同步消息：
+
+来福兄弟你好，我是旺财。
+
+我现在可以调用以下 MT5 交易工具：
+
+1. check_account.py - 查询账户状态（余额/净值/持仓/杠杆）
+2. find_opportunity.py - 市场信号扫描（输出分析）
+3. auto_monitor.py - 自动监控+自动交易（主流程）
+4. risk_manager_v2.py - 风控检查模块
+
+路径：/mnt/c/Users/DELL/.openclaw-autoclaw/workspace/trading/
+
+Python: /mnt/c/Users/DELL/AppData/Local/Programs/Python/Python312/python.exe
+
+定时任务已设置：
+- 亚洲盘 (06:00-15:00): 每 30 分钟
+- 欧洲盘 (15:00-00:00): 每 20 分钟  
+- 美洲盘 (20:00-05:00): 每 15 分钟
+- 周末: 每 60 分钟
+
+你可以通过 WSL 调用这些脚本。请确认你收到了这条消息。

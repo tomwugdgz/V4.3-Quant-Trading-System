@@ -1,0 +1,14 @@
+﻿python.exe : ERROR: I/O operation on closed file.
+所在位置 行:1 字符: 1
++ & "C:\Users\DELL\AppData\Local\Programs\Python\Python312\python.exe"  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ERROR: I/O operation on closed file.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Traceback (most recent call last):
+  File "<string>", line 8, in <module>
+  File "C:\Users\DELL\.openclaw-autoclaw\workspace\trading\auto_monitor.py", line 668, in main_loop
+    log_message("=" * 60)
+  File "C:\Users\DELL\.openclaw-autoclaw\workspace\trading\auto_monitor.py", line 81, in log_message
+    print(f"[{timestamp}] [{level}] {message}")
+ValueError: I/O operation on closed file.

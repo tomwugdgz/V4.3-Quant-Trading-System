@@ -1,20 +1,47 @@
-import json
-from datetime import datetime
+import MetaTrader5 as mt5
+import os, sys
+os.environ["PYTHONIOENCODING"] = "utf-8"
 
-try:
-    with open('C:/Users/DELL/.openclaw-autoclaw/workspace/trading/trade_history.json', 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    
-    today = datetime.now().strftime('%Y-%m-%d')
-    trades = [t for t in data if t.get('close_time', '')[:10] == today or t.get('open_time', '')[:10] == today]
-    
-    print(f'今日交易：{len(trades)}单')
-    print()
-    for t in trades[-10:]:
-        print(f"{t['symbol']} {t['type']} {t['lots']} Lot @ {t['open_price']}")
-        print(f"  SL: {t['sl']} TP: {t['tp']} | 盈亏：{t.get('profit', 'N/A')}")
-        print()
-except FileNotFoundError:
-    print('暂无交易记录')
-except Exception as e:
-    print(f'错误：{e}')
+if not mt5.initialize():
+    print("MT5 init failed")
+    sys.exit(1)
+
+acc = mt5.account_info()
+print(f"Balance: ${acc.balance:.2f}")
+print(f"Equity: ${acc.equity:.2f}")
+print(f"Margin: ${acc.margin:.2f}")
+print(f"Free: ${acc.margin_free:.2f}")
+print(f"Leverage: 1:{acc.leverage}")
+pos_count = len(mt5.positions_get()) if mt5.positions_get() else 0
+print(f"Positions: {pos_count}")
+print()
+
+positions = mt5.positions_get()
+if positions:
+    for p in positions:
+        profit = p.profit + p.swap
+        tname = "BUY" if p.type == 0 else "SELL"
+        print(f"[{p.symbol}] {tname} {p.volume} lots @ {p.price_open:.5f} | SL:{p.sl:.5f} TP:{p.tp:.5f} | P/L: ${profit:.2f}")
+else:
+    print("No open positions")
+
+print()
+
+from datetime import datetime
+today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+
+deals = mt5.history_deals_get(today_start)
+if deals:
+    print(f"Today's deals: {len(deals)}")
+    total_profit = 0
+    for d in deals:
+        if d.profit:
+            total_profit += d.profit
+            t = datetime.fromtimestamp(d.time)
+            dname = getattr(d, 'comment', '') or getattr(d, 'order', '') or ''
+            print(f"  {dname} {d.symbol} | P/L: ${d.profit:.2f} | {t:%H:%M}")
+    print(f"Today P/L: ${total_profit:.2f}")
+else:
+    print("No deals today yet")
+
+mt5.shutdown()

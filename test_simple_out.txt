@@ -1,0 +1,2 @@
+Python started
+MT5 module imported
