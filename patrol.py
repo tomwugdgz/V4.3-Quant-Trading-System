@@ -28,7 +28,7 @@ ACCOUNT = 52797683
 SERVER = "ICMarketsSC-Demo"
 
 # ========== v5.5 全链路优化版 ==========
-SIGNAL_MIN = 0.45           # 信号强度门槛 45%（<45%不开仓）
+SIGNAL_MIN = 0.35           # 信号强度门槛 35%（<35%不开仓）
 SUPER_SIGNAL = 0.60        # SUPER 信号门槛 60%
 RISK_PCT_SUPER = 0.005     # 60%+ 信号：0.5% 风险
 RISK_PCT_STRONG = 0.003     # 45-60% 信号：0.3% 风险
@@ -55,7 +55,7 @@ KELLY_REGISTRY = {
     'USDCHF':  {'W': 0.57, 'R': 0.85, 'kf': 0.057},  # 37笔 +$28.91 EV=0.049
     'GBPUSD':  {'W': 0.52, 'R': 1.03, 'kf': 0.061},  # 21笔 +$19.98 EV=0.063
     # === Micro-Test 品种（小单累积数据）===
-    'XAUUSD':  {'W': 1.00, 'R': 3.00, 'kf': 0.500},  # 2笔 +$396 样本不足 Micro-Test
+    'XAUUSD':  {'W': 1.00, 'R': 3.00, 'kf': 0.500},  # 2笔 +$396 Micro-Test 0.05手
     # 永久禁止（负 EV）: EURUSD/NZDUSD/USDJPY/AUDJPY/BTCUSD/AUDCHF
 }
 
@@ -157,13 +157,13 @@ def get_kelly_lot_size(symbol, strength):
     高Kelly(kf>10%) → SUPER 0.10 / STRONG 0.06
     中Kelly(kf 5-10%) → SUPER 0.10 / STRONG 0.06
     低Kelly(kf <5%) → SUPER 0.08 / STRONG 0.05
-    Micro-Test(负Kelly) → SUPER 0.02 / STRONG 0.02
+    Micro-Test(负Kelly) → SUPER 0.05 / STRONG 0.05
     """
     quality = get_kelly_quality(symbol)
     is_super = strength >= SUPER_SIGNAL*100
 
     if is_micro_test(symbol):
-        return 0.02  # Micro-Test 一律最大 0.02 手
+        return 0.05  # Micro-Test 最大 0.05 手（$9700 * 0.5% = $48.5风险上限）
 
     if quality == 'high':
         return 0.10 if is_super else 0.06
@@ -453,7 +453,7 @@ def execute(symbol, direction, strength):
         "tp": tp_price,
         "deviation": 50,
         "magic": 240501,
-        "comment": "Patrol Smart v5.6",
+        "comment": "Patrol Smart v5.7",
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
@@ -492,7 +492,7 @@ def recently_traded(symbol, hours=2):
             for d in deals:
                 if d.symbol == symbol and d.comment in (
                     'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1',
-                    'Patrol Smart v5.6', 'Patrol Smart v5.6', 'Patrol Auto', 'FORCE_CLOSE'):
+                    'Patrol Smart v5.7', 'Patrol Smart v5.7', 'Patrol Auto', 'FORCE_CLOSE'):
                     return True
     except:
         pass
@@ -504,7 +504,7 @@ def trades_this_hour():
         from_time = to_time - 3600
         deals = mt5.history_deals_get(from_time, to_time)
         return sum(1 for d in deals if d.comment in (
-            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.6', 'Patrol Smart v5.6', 'Patrol Auto')
+            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.7', 'Patrol Smart v5.7', 'Patrol Auto')
             and d.entry in (0,1))
     except:
         return 0
@@ -545,7 +545,7 @@ def get_daily_pnl():
 
 def run():
     log("=" * 60)
-    log("30min Patrol - v5.6 累积优化版")
+    log("30min Patrol - v5.7 累积优化版")
     log("=" * 60)
     info = mt5_connect()
     if not info:
@@ -592,7 +592,7 @@ def run():
         direction, strength = calculate_signal_v3(sym_name)
 
         # 信号强度过滤：Micro-Test 70%+，普通品种 45%+
-        min_signal = 70 if is_micro_test(sym_name) else SIGNAL_MIN * 100
+        min_signal = 60 if is_micro_test(sym_name) else SIGNAL_MIN * 100
         if direction and strength < min_signal:
             log(f"  {sym_name}: 信号{strength:.1f}% < {min_signal:.0f}%{'(Micro-Test门槛)' if is_micro_test(sym_name) else ''}，跳过")
             continue
@@ -605,14 +605,14 @@ def run():
             kf_tag = '[Micro-Test]'
         else:
             kf_tag = {'high': '[Kelly高]', 'mid': '[Kelly中]', 'low': '[Kelly低]'}.get(quality, '')
-        tier = 'SUPER' if strength >= SUPER_SIGNAL*100 else 'STRONG' if strength >= 45 else 'LOW'
+        tier = 'SUPER' if strength >= SUPER_SIGNAL*100 else 'STRONG' if strength >= SIGNAL_MIN * 100 else 'LOW'
         log(f"  {sym_name} {tag} {kf_tag}: {direction or 'NEUTRAL'} {strength:.1f}% [{tier}]")
 
         if direction and strength >= SIGNAL_MIN * 100:
             results.append((sym_name, direction, strength, quality))
 
     if not results:
-        log("无达标信号（信号>=45%且Kelly正期望）")
+        log("无达标信号（信号>=35%或XAUUSD>=60%，Kelly正期望）")
         mt5.shutdown()
         return
 
