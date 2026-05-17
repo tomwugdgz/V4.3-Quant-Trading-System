@@ -26,8 +26,8 @@ losses = sum(1 for d in closes if (d.profit + d.swap + d.commission) <= 0)
 total_trades = wins + losses
 wr = (wins / total_trades * 100) if total_trades > 0 else 0
 
-# 账户起始余额（假设 $10000）
-START_BALANCE = 10000
+# 账户起始余额（ICMarkets Demo 初始 $10000，每次重启会变，所以用固定参考值）
+START_BALANCE = 10000.0  # v5.5 后以这个为基准计算总回报
 total_return = (float(info.balance) - START_BALANCE) / START_BALANCE * 100
 
 # 生成报告
@@ -120,6 +120,8 @@ if daily_pnl < -50:
     print('  ⚠️ 今日亏损超限，系统已停止交易')
 elif daily_pnl < 0:
     print('  ⚡ 今日亏损中，注意风控')
+elif daily_pnl == 0:
+    print('  ⚪ 今日持平，耐心等待信号')
 else:
     print('  ✅ 今日盈利，继续保持')
 

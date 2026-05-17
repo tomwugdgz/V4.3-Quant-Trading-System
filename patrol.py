@@ -1,4 +1,24 @@
 #!/usr/bin/env python
+import json
+import os
+
+STATE_FILE = os.path.join(os.path.dirname(__file__), 'trade_state.json')
+
+def load_state():
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE, 'r') as f:
+            return json.load(f)
+    return {
+        'last_update': None, 'version': 'v1.0',
+        'patrol_runs': [], 'consecutive_no_signal': 0,
+        'last_trade': None, 'last_signal': None,
+        'daily_pnl': 0.0, 'daily_loss_limit': 50.0, 'consecutive_losses': 0
+    }
+
+def save_state(state):
+    state['last_update'] = __import__('datetime').datetime.now().__str__()
+    with open(STATE_FILE, 'w') as f:
+        json.dump(state, f, ensure_ascii=False, indent=2)
 # -*- coding: utf-8 -*-
 """
 旺财智能交易系统 v5.1
@@ -453,7 +473,7 @@ def execute(symbol, direction, strength):
         "tp": tp_price,
         "deviation": 50,
         "magic": 240501,
-        "comment": "Patrol Smart v5.7",
+        "comment": "Patrol Smart v5.8",
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
@@ -464,6 +484,22 @@ def execute(symbol, direction, strength):
     log(f"  结果: retcode={result.retcode} {result.comment}")
     if result.retcode == mt5.TRADE_RETCODE_DONE:
         log(f"成功开仓 #{result.order}")
+        # 更新状态：记录交易
+        try:
+            st = load_state()
+            st['last_trade'] = {
+                'time': datetime.now().strftime('%Y-%m-%d %H:%M'),
+                'symbol': symbol, 'direction': direction,
+                'volume': float(lots), 'entry': float(price),
+                'sl': float(sl_price), 'tp': float(tp_price),
+                'strength': float(strength), 'kf': float(kf),
+                'ticket': int(result.order), 'sl_pips': float(sl_pips), 'tp_pips': float(tp_pips)
+            }
+            st['last_signal'] = {'symbol': symbol, 'direction': direction, 'strength': float(strength), 'kf': float(kf)}
+            st['consecutive_no_signal'] = 0
+            save_state(st)
+        except Exception as e:
+            log(f"  [状态记录失败] {e}")
         return True
     else:
         log(f"失败: {result.comment}")
@@ -492,7 +528,7 @@ def recently_traded(symbol, hours=2):
             for d in deals:
                 if d.symbol == symbol and d.comment in (
                     'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1',
-                    'Patrol Smart v5.7', 'Patrol Smart v5.7', 'Patrol Auto', 'FORCE_CLOSE'):
+                    'Patrol Smart v5.8', 'Patrol Smart v5.8', 'Patrol Auto', 'FORCE_CLOSE'):
                     return True
     except:
         pass
@@ -504,7 +540,7 @@ def trades_this_hour():
         from_time = to_time - 3600
         deals = mt5.history_deals_get(from_time, to_time)
         return sum(1 for d in deals if d.comment in (
-            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.7', 'Patrol Smart v5.7', 'Patrol Auto')
+            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.8', 'Patrol Smart v5.8', 'Patrol Auto')
             and d.entry in (0,1))
     except:
         return 0
@@ -545,7 +581,7 @@ def get_daily_pnl():
 
 def run():
     log("=" * 60)
-    log("30min Patrol - v5.7 累积优化版")
+    log("30min Patrol - v5.8 累积优化版")
     log("=" * 60)
     info = mt5_connect()
     if not info:
@@ -612,6 +648,10 @@ def run():
             results.append((sym_name, direction, strength, quality))
 
     if not results:
+        # 更新状态：记录无信号
+        st = load_state()
+        st['consecutive_no_signal'] = st.get('consecutive_no_signal', 0) + 1
+        save_state(st)
         log("无达标信号（信号>=35%或XAUUSD>=60%，Kelly正期望）")
         mt5.shutdown()
         return

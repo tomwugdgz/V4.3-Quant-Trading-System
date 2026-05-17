@@ -1,0 +1,11 @@
+{
+  "last_update": "2026-05-17 21:39:40.175962",
+  "version": "v1.0",
+  "patrol_runs": [],
+  "consecutive_no_signal": 2,
+  "last_trade": null,
+  "last_signal": null,
+  "daily_pnl": 0.0,
+  "daily_loss_limit": 50.0,
+  "consecutive_losses": 0
+}
