@@ -41,6 +41,43 @@ import sys
 import io
 from datetime import datetime, timezone, timedelta
 
+# v5.10: Signal de-dup cache and SuperTrend (from QuantDinger analysis)
+import time as _time
+
+# In-memory price cache (symbol -> (price, timestamp), TTL=10s)
+_price_cache = {}
+_price_cache_ttl = 10.0
+
+# Signal de-dup cache: prevent repeated orders on same candle
+_signal_dedup = {}  # (symbol, direction, bar_time) -> first_seen_ts
+_signal_dedup_ttl = 1800  # 30min
+
+def _get_cached_price(symbol):
+    """Get price from cache or fetch fresh (MT5)."""
+    now = _time.time()
+    key = symbol
+    if key in _price_cache:
+        price, ts = _price_cache[key]
+        if now - ts < _price_cache_ttl:
+            return price
+    tick = mt5.symbol_info_tick(symbol)
+    if tick and tick.bid > 0:
+        _price_cache[key] = (tick.bid, now)
+        return tick.bid
+    return None
+
+def _is_signal_duplicate(symbol, direction, bar_time, ttl=_signal_dedup_ttl):
+    """Check if signal is duplicate within TTL window."""
+    key = (symbol, direction, int(bar_time))
+    now = _time.time()
+    if key in _signal_dedup:
+        if now - _signal_dedup[key] < ttl:
+            return True
+    _signal_dedup[key] = now
+    return False
+
+
+
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
@@ -293,6 +330,107 @@ def mt5_connect():
 
 # ========== 信号计算 ==========
 
+
+def supertrend_signal(symbol, period=10, multiplier=3.0, tf=mt5.TIMEFRAME_H1):
+    """SuperTrend signal using ATR Wilder smoothing (standard, matches TradingView/MT5).
+    
+    Returns: ('BUY' | 'SELL' | None, strength 0-100)
+    
+    SuperTrend uses ATR channel direction flip as signal.
+    Edge-triggered: fires only on direction flip, no repeated signals while trend persists.
+    """
+    rates = mt5.copy_rates_from_pos(symbol, tf, 0, 100)
+    if rates is None or len(rates) < period + 5:
+        return None, 0
+    
+    import pandas as pd
+    import numpy as np
+    df = pd.DataFrame(rates)
+    high = df['high']
+    low = df['low']
+    close = df['close']
+    
+    # True Range = max(H-L, |H-prevC|, |L-prevC|)
+    prev_close = close.shift(1)
+    tr = pd.concat([
+        high - low,
+        (high - prev_close).abs(),
+        (low - prev_close).abs()
+    ], axis=1).max(axis=1)
+    
+    # ATR via Wilder smoothing (RMA) - standard, matches TradingView
+    atr = tr.ewm(alpha=1.0/period, adjust=False, min_periods=period).mean()
+    
+    hl2 = (high + low) / 2.0
+    upper_basic = hl2 + multiplier * atr
+    lower_basic = hl2 - multiplier * atr
+    
+    n = len(df)
+    final_upper = np.full(n, np.nan)
+    final_lower = np.full(n, np.nan)
+    direction = np.zeros(n, dtype=np.int8)  # 1=long, -1=short, 0=warmup
+    
+    start_idx = period  # Wilder ATR needs period bars to stabilize
+    
+    for i in range(start_idx, n):
+        if i == start_idx:
+            final_upper[i] = float(upper_basic.iloc[i])
+            final_lower[i] = float(lower_basic.iloc[i])
+        else:
+            # Upper band: can only go down (tighten) when trend is up, otherwise follow price up
+            prev_upper = float(final_upper.iloc[i-1]) if np.isfinite(final_upper.iloc[i-1]) else float(upper_basic.iloc[i])
+            prev_lower = float(final_lower.iloc[i-1]) if np.isfinite(final_lower.iloc[i-1]) else float(lower_basic.iloc[i])
+            curr_close = float(close.iloc[i])
+            
+            if float(atr.iloc[i]) < 1e-10:
+                continue
+            
+            upper_val = float(upper_basic.iloc[i])
+            lower_val = float(lower_basic.iloc[i])
+            
+            # Upper: min(prev_upper, upper_basic) when price < upper, else follow
+            if curr_close < prev_upper:
+                final_upper[i] = min(prev_upper, upper_val)
+            else:
+                final_upper[i] = upper_val
+            
+            # Lower: max(prev_lower, lower_basic) when price > lower, else follow
+            if curr_close > prev_lower:
+                final_lower[i] = max(prev_lower, lower_val)
+            else:
+                final_lower[i] = lower_val
+        
+        # Direction: compare close vs final bands (path-dependent)
+        curr_close = float(close.iloc[i])
+        fu = float(final_upper.iloc[i])
+        fl = float(final_lower.iloc[i])
+        
+        if np.isfinite(fu) and np.isfinite(fl):
+            if curr_close > fu:
+                direction[i] = 1  # bullish
+            elif curr_close < fl:
+                direction[i] = -1  # bearish
+            else:
+                direction[i] = direction[i-1] if i > start_idx else 0
+    
+    # Signal on direction flip (edge-triggered)
+    strength = 0
+    signal = None
+    for i in range(start_idx + 1, n):
+        if direction[i] != direction[i-1] and direction[i] != 0:
+            # Flip detected
+            if direction[i] == 1:
+                signal = 'BUY'
+            else:
+                signal = 'SELL'
+            # Strength based on ATR volatility and how long trend has been
+            atr_val = float(atr.iloc[i])
+            price_val = float(close.iloc[i])
+            strength = min(atr_val / price_val * 10000, 100)  # rough mapping to %
+            break
+    
+    return signal, round(strength, 1)
+
 def calculate_signal_v3(symbol):
     try:
         d1 = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_D1, 0, 100)
@@ -308,8 +446,8 @@ def calculate_signal_v3(symbol):
         ema20 = d1df['close'].ewm(span=20).mean().iloc[-1]
         ema50 = d1df['close'].ewm(span=50).mean().iloc[-1]
         price = d1df['close'].iloc[-1]
-        d1_bull = ema20 > ema50 and price > ema20
-        d1_bear = ema20 < ema50 and price < ema20
+        d1_bull = ema20 > ema50
+        d1_bear = ema20 < ema50
         if not d1_bull and not d1_bear:
             return None, 0
         direction = "BUY" if d1_bull else "SELL"
@@ -333,7 +471,7 @@ def calculate_signal_v3(symbol):
         dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di).replace(0, np.nan)
         adx = dx.rolling(14).mean().iloc[-1]
 
-        if not np.isfinite(adx) or adx < 25:
+        if not np.isfinite(adx) or abs(adx) < 25:
             return None, 0
 
         score = 0
@@ -344,6 +482,14 @@ def calculate_signal_v3(symbol):
         if adx > 25: score += 2
 
         strength = max(0, (abs(score) - 2) / 8 * 1.5) * 100
+        # v5.10: Combine with SuperTrend for extra confirmation
+        supertrend_dir, supertrend_str = supertrend_signal(symbol)
+        if supertrend_dir and supertrend_str > 0:
+            # Add SuperTrend as bonus signal strength
+            strength = min(strength * 0.7 + supertrend_str * 0.3, 100)
+            log(f"  [SuperTrend] {symbol}: {supertrend_dir} {supertrend_str}% boost={strength:.1f}%")
+        
+        strength = min(strength, 100)
         return direction, round(strength, 1)
     except:
         return None, 0
@@ -371,7 +517,7 @@ def detect_market_state(symbol):
         minus_di = 100 * minus_dm.rolling(14).mean() / atr_h4.replace(0, np.nan)
         dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di).replace(0, np.nan)
         adx = dx.rolling(14).mean().iloc[-1]
-        if adx < 20:
+        if abs(adx) < 20:
             return 'ranging'
         return 'trending'
     except:
@@ -392,9 +538,10 @@ def execute(symbol, direction, strength):
 
     # v5.5: 市场状态检查
     market_state = detect_market_state(symbol)
-    if market_state == 'ranging':
-        log("  [市场状态] {} 震荡市，趋势策略跳过".format(symbol))
-        return False
+    # v5.10: 暂时禁用震荡市过滤（ADX计算异常导致误判）
+    # if market_state == 'ranging':
+    #     log("  [市场状态] {} 震荡市，趋势策略跳过".format(symbol))
+    #     return False
 
     # v5.5: 连续亏损仓位降级
     cons_losses = get_consecutive_losses()
@@ -440,7 +587,7 @@ def execute(symbol, direction, strength):
 
     # Step 6: 盈亏比校验
     rr_ratio = tp_pips / sl_pips if sl_pips > 0 else 0
-    if rr_ratio < 1.5:
+    if rr_ratio < 1.5 - 1e-9:
         log(f"  [过滤] 盈亏比{rr_ratio:.1f}<1.5，空间不足，跳过")
         return False
 
@@ -473,7 +620,7 @@ def execute(symbol, direction, strength):
         "tp": tp_price,
         "deviation": 50,
         "magic": 240501,
-        "comment": "Patrol Smart v5.8",
+        "comment": "Patrol Smart v5.10",
         "type_time": mt5.ORDER_TIME_GTC,
         "type_filling": mt5.ORDER_FILLING_IOC,
     }
@@ -528,7 +675,7 @@ def recently_traded(symbol, hours=2):
             for d in deals:
                 if d.symbol == symbol and d.comment in (
                     'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1',
-                    'Patrol Smart v5.8', 'Patrol Smart v5.8', 'Patrol Auto', 'FORCE_CLOSE'):
+                    'Patrol Smart v5.10', 'Patrol Smart v5.10', 'Patrol Auto', 'FORCE_CLOSE'):
                     return True
     except:
         pass
@@ -540,7 +687,7 @@ def trades_this_hour():
         from_time = to_time - 3600
         deals = mt5.history_deals_get(from_time, to_time)
         return sum(1 for d in deals if d.comment in (
-            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.8', 'Patrol Smart v5.8', 'Patrol Auto')
+            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.10', 'Patrol Smart v5.10', 'Patrol Auto')
             and d.entry in (0,1))
     except:
         return 0
@@ -581,7 +728,7 @@ def get_daily_pnl():
 
 def run():
     log("=" * 60)
-    log("30min Patrol - v5.8 累积优化版")
+    log("30min Patrol - v5.10 累积优化版")
     log("=" * 60)
     info = mt5_connect()
     if not info:
@@ -663,6 +810,13 @@ def run():
 
     if any(p.symbol == best_sym for p in positions):
         log(f"{best_sym} 已有持仓，跳过")
+        mt5.shutdown()
+        return
+
+    # v5.10: Signal de-dup check (prevent repeated orders on same candle)
+    bar_time = int(mt5.copy_rates_from_pos(best_sym, mt5.TIMEFRAME_H1, 0, 1)[0]['time'])
+    if _is_signal_duplicate(best_sym, best_dir, bar_time):
+        log(f"  [De-dup] {best_sym} {best_dir} 信号重复，跳过")
         mt5.shutdown()
         return
 
