@@ -126,6 +126,57 @@ trading/
 ├── daily_summary.py       # 每日汇总
 └── auto_trade_self.py     # 自动交易（旧版）
 ```
+flowchart LR
+    U[交易员 / 运营者 / 研究员]
+
+    subgraph FE[前端层]
+        WEB[Vue Web App]
+        NG[Nginx 交付层]
+    end
+
+    subgraph BE[应用层]
+        API[Flask API 网关]
+        AI[AI 分析服务]
+        STRAT[策略与回测引擎]
+        EXEC[交易执行与快速交易]
+        BILL[计费与会员]
+    end
+
+    subgraph DATA[状态层]
+        PG[(PostgreSQL 16)]
+        REDIS[(Redis 7)]
+        FILES[日志与运行时数据]
+    end
+
+    subgraph EXT[外部集成]
+        LLM[LLM 提供商]
+        EXCH[加密货币交易所]
+        BROKER[IBKR / MT5 / Alpaca]
+        MARKET[行情 / 新闻]
+        PAY[TronGrid / USDT 支付]
+        NOTIFY[Telegram / Email / SMS / Webhook]
+    end
+
+    U --> WEB
+    WEB --> NG --> API
+    API --> AI
+    API --> STRAT
+    API --> EXEC
+    API --> BILL
+
+    AI --> PG
+    STRAT --> PG
+    EXEC --> PG
+    BILL --> PG
+    API --> REDIS
+    API --> FILES
+
+    AI --> LLM
+    AI --> MARKET
+    EXEC --> EXCH
+    EXEC --> BROKER
+    BILL --> PAY
+    API --> NOTIFY
 
 ---
 
