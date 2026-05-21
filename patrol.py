@@ -370,6 +370,14 @@ def calc_pivot_points(symbol, tf=mt5.TIMEFRAME_D1):
     return {'PP': pp, 'R1': r1, 'R2': r2, 'R3': r3, 'S1': s1, 'S2': s2, 'S3': s3,
             'H': h, 'L': l, 'C': c}
 
+
+def get_pip_size(symbol):
+    """Get pip size for a symbol"""
+    sym_info = mt5.symbol_info(symbol)
+    digits = sym_info.digits
+    point = sym_info.point
+    return point * 10 if digits in [3, 5] else point
+
 def pivot_zone_check(symbol, price, direction, threshold_pips=20):
     """检查价格是否在枢轴点附近(±threshold_pips)
     策略32: "你只应在枢轴点附近进出，而不是之间"
@@ -610,8 +618,8 @@ def supertrend_signal(symbol, period=10, multiplier=3.0, tf=mt5.TIMEFRAME_H1):
             final_lower[i] = float(lower_basic.iloc[i])
         else:
             # Upper band: can only go down (tighten) when trend is up, otherwise follow price up
-            prev_upper = float(final_upper.iloc[i-1]) if np.isfinite(final_upper.iloc[i-1]) else float(upper_basic.iloc[i])
-            prev_lower = float(final_lower.iloc[i-1]) if np.isfinite(final_lower.iloc[i-1]) else float(lower_basic.iloc[i])
+            prev_upper = float(final_upper[i-1]) if np.isfinite(float(final_upper[i-1])) else float(upper_basic.iloc[i])
+            prev_lower = float(final_lower[i-1]) if np.isfinite(float(final_lower[i-1])) else float(lower_basic.iloc[i])
             curr_close = float(close.iloc[i])
             
             if float(atr.iloc[i]) < 1e-10:
@@ -634,8 +642,8 @@ def supertrend_signal(symbol, period=10, multiplier=3.0, tf=mt5.TIMEFRAME_H1):
         
         # Direction: compare close vs final bands (path-dependent)
         curr_close = float(close.iloc[i])
-        fu = float(final_upper.iloc[i])
-        fl = float(final_lower.iloc[i])
+        fu = float(final_upper[i])
+        fl = float(final_lower[i])
         
         if np.isfinite(fu) and np.isfinite(fl):
             if curr_close > fu:
@@ -685,9 +693,9 @@ def calculate_signal_v3(symbol):
         direction = "BUY" if d1_bull else "SELL"
 
         delta4 = h4df['close'].diff()
-        gain4 = delta4.clip(lower=0).rolling(14).mean()
-        loss4 = (-delta4.clip(upper=0)).rolling(14).mean()
-        rs4 = gain4 / loss4.replace(0, np.nan)
+        gain4 = delta4.clip(lower=0).ewm(alpha=1.0/14, adjust=False).mean()
+        loss4 = (-delta4.clip(upper=0)).ewm(alpha=1.0/14, adjust=False).mean()
+        rs4 = gain4 / loss4.replace(0, 1e-10)
         h4_rsi = (100 - 100 / (1 + rs4)).iloc[-1]
 
         hi, lo, cl = h1df['high'], h1df['low'], h1df['close']
@@ -695,15 +703,23 @@ def calculate_signal_v3(symbol):
         tr2 = abs(hi - cl.shift(1))
         tr3 = abs(lo - cl.shift(1))
         tr = np.maximum(np.maximum(tr1, tr2), tr3)
-        atr_h1 = tr.rolling(14).mean()
-        plus_dm = hi.diff().clip(lower=0)
-        minus_dm = (-lo.diff()).clip(upper=0)
-        plus_di = 100 * plus_dm.rolling(14).mean() / atr_h1.replace(0, np.nan)
-        minus_di = 100 * minus_dm.rolling(14).mean() / atr_h1.replace(0, np.nan)
-        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di).replace(0, np.nan)
-        adx = dx.rolling(14).mean().iloc[-1]
+        sym_info = mt5.symbol_info(symbol)
+        digits = sym_info.digits
+        pip_mult = 0.0001 if digits == 5 else (0.01 if digits == 3 else 0.0001)
+        # Normalize to pips
+        tr1 = (hi - lo) / pip_mult
+        tr2 = abs(hi - cl.shift(1)) / pip_mult
+        tr3 = abs(lo - cl.shift(1)) / pip_mult
+        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        plus_dm = (hi - hi.shift(1)).clip(lower=0) / pip_mult
+        minus_dm = (lo.shift(1) - lo).clip(lower=0) / pip_mult
+        atr14 = tr.ewm(alpha=1.0/14, adjust=False).mean()
+        plus_di = plus_dm.ewm(alpha=1.0/14, adjust=False).mean() / atr14.replace(0, 1e-10) * 100
+        minus_di = minus_dm.ewm(alpha=1.0/14, adjust=False).mean() / atr14.replace(0, 1e-10) * 100
+        dx = abs(plus_di - minus_di) / (plus_di + minus_di).replace(0, 1e-10) * 100
+        adx = dx.ewm(alpha=1.0/14, adjust=False).mean().iloc[-1]
 
-        if not np.isfinite(adx) or abs(adx) < 25:
+        if not np.isfinite(adx) or abs(adx) < 15:
             return None, 0
 
         score = 0
@@ -716,7 +732,7 @@ def calculate_signal_v3(symbol):
         strength = max(0, (abs(score) - 2) / 8 * 1.5) * 100
 
         # v5.11: Pivot Zone Check (策略32-33, 39, 43)
-        pivot_ok, zone = pivot_zone_check(symbol, current_price, direction, threshold_pips=25)
+        pivot_ok, zone = pivot_zone_check(symbol, price, direction, threshold_pips=25)
         if not pivot_ok:
             log(f"  [Pivot] {symbol} {direction} 不在交易区({zone})，跳过")
             return None, 0
@@ -776,13 +792,13 @@ def detect_market_state(symbol):
         tr2 = abs(hi - cl.shift(1))
         tr3 = abs(lo - cl.shift(1))
         tr = np.maximum(np.maximum(tr1, tr2), tr3)
-        atr_h4 = tr.rolling(14).mean()
+        atr_h4 = tr.ewm(alpha=1.0/14, adjust=False).mean()
         plus_dm = hi.diff().clip(lower=0)
         minus_dm = (-lo.diff()).clip(upper=0)
-        plus_di = 100 * plus_dm.rolling(14).mean() / atr_h4.replace(0, np.nan)
-        minus_di = 100 * minus_dm.rolling(14).mean() / atr_h4.replace(0, np.nan)
-        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di).replace(0, np.nan)
-        adx = dx.rolling(14).mean().iloc[-1]
+        plus_di = 100 * plus_dm.ewm(alpha=1.0/14, adjust=False).mean() / atr_h4.replace(0, 1e-10)
+        minus_di = 100 * minus_dm.ewm(alpha=1.0/14, adjust=False).mean() / atr_h4.replace(0, 1e-10)
+        dx = 100 * abs(plus_di - minus_di) / (plus_di + minus_di).replace(0, 1e-10)
+        adx = dx.ewm(alpha=1.0/14, adjust=False).mean().iloc[-1]
         if abs(adx) < 20:
             return 'ranging'
         return 'trending'
@@ -941,7 +957,7 @@ def recently_traded(symbol, hours=2):
             for d in deals:
                 if d.symbol == symbol and d.comment in (
                     'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1',
-                    'Patrol Smart v5.11', 'Patrol Smart v5.11', 'Patrol Auto', 'FORCE_CLOSE'):
+                    'Patrol Smart v5.12', 'Patrol Smart v5.12', 'Patrol Auto', 'FORCE_CLOSE'):
                     return True
     except:
         pass
@@ -953,7 +969,7 @@ def trades_this_hour():
         from_time = to_time - 3600
         deals = mt5.history_deals_get(from_time, to_time)
         return sum(1 for d in deals if d.comment in (
-            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.11', 'Patrol Smart v5.11', 'Patrol Auto')
+            'Patrol Smart', 'Patrol Smart v5', 'Patrol Smart v5.1', 'Patrol Smart v5.12', 'Patrol Smart v5.12', 'Patrol Auto')
             and d.entry in (0,1))
     except:
         return 0
