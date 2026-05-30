@@ -37,6 +37,7 @@ v5.1变更（2026-05-09）：
 import MetaTrader5 as mt5
 import pandas as pd
 import numpy as np
+np.seterr(divide="ignore", invalid="ignore")
 import sys
 import io
 from datetime import datetime, timezone, timedelta
@@ -719,7 +720,7 @@ def calculate_signal_v3(symbol):
         dx = abs(plus_di - minus_di) / (plus_di + minus_di).replace(0, 1e-10) * 100
         adx = dx.ewm(alpha=1.0/14, adjust=False).mean().iloc[-1]
 
-        if not np.isfinite(adx) or abs(adx) < 15:
+        if not np.isfinite(adx) or abs(adx) < 12:
             return None, 0
 
         score = 0

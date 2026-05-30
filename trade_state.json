@@ -1,10 +1,28 @@
 {
-  "last_update": "2026-05-17 21:39:40.175962",
+  "last_update": "2026-05-30 00:20:43.999083",
   "version": "v1.0",
   "patrol_runs": [],
-  "consecutive_no_signal": 2,
-  "last_trade": null,
-  "last_signal": null,
+  "consecutive_no_signal": 0,
+  "last_trade": {
+    "time": "2026-05-30 00:20",
+    "symbol": "AUDUSD",
+    "direction": "BUY",
+    "volume": 0.1,
+    "entry": 0.71875,
+    "sl": 0.71675,
+    "tp": 0.72175,
+    "strength": 90.0,
+    "kf": 0.067,
+    "ticket": 1675755153,
+    "sl_pips": 20.0,
+    "tp_pips": 30.0
+  },
+  "last_signal": {
+    "symbol": "AUDUSD",
+    "direction": "BUY",
+    "strength": 90.0,
+    "kf": 0.067
+  },
   "daily_pnl": 0.0,
   "daily_loss_limit": 50.0,
   "consecutive_losses": 0
