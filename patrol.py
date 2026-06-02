@@ -293,17 +293,7 @@ def get_dynamic_sl_tp(symbol):
     digits = sym.digits
     point = sym.point
 
-    # v5.11: 策略11 - 止损放在Pivot外侧，留出反抽空间
-    # "33点能安全渡过反抽，那就用33点"
-    pivot_threshold = max(sl_pips, 25)  # 至少25pip或ATR计算值
-    
-    # 调整SL到Pivot外侧
-    if sl_pips < pivot_threshold:
-        buffer_extra = pivot_threshold - sl_pips
-        sl_pips = pivot_threshold
-        tp_pips = tp_pips + buffer_extra  # TP也相应调整，保持RR
-    
-    # 缓冲 = ATR × 0.5（动态自适应）
+    # v5.11: 先初始化 sl_pips/tp_pips，再做Pivot调整
     if is_precious_metal(symbol):
         pip_size = 0.01
         atr_pips = atr / pip_size
@@ -325,6 +315,16 @@ def get_dynamic_sl_tp(symbol):
         buffer_pips = atr_pips * ATR_SL_BUFFER_MULT
         sl_pips = max(atr_pips * ATR_SL_MULT['default'] + buffer_pips, 20)
         tp_pips = sl_pips * TP_SL_RATIO
+
+    # v5.11: 策略11 - 止损放在Pivot外侧，留出反抽空间
+    # "33点能安全渡过反抽，那就用33点"
+    pivot_threshold = max(sl_pips, 25)  # 至少25pip或ATR计算值
+
+    # 调整SL到Pivot外侧
+    if sl_pips < pivot_threshold:
+        buffer_extra = pivot_threshold - sl_pips
+        sl_pips = pivot_threshold
+        tp_pips = tp_pips + buffer_extra  # TP也相应调整，保持RR
 
     log(f"  ATR={atr:.5f} | SL={sl_pips:.1f}pips | TP={tp_pips:.1f}pips")
     return sl_pips, tp_pips, digits, point, pip_div
@@ -483,7 +483,7 @@ def london_session_boost():
     if is_london_session():
         return 1.2  # London时段信号增强20%
     else:
-        return 0.7  # 非London时段信号打7折
+        return 1.0  # 非London时段无折扣（v5.13修复）
 
 # v5.11: 均线背离检测 (策略8-9)
 def detect_ma_divergence(symbol, tf=mt5.TIMEFRAME_H1):
@@ -768,8 +768,7 @@ def calculate_signal_v3(symbol):
         london_mult = london_session_boost()
         if london_mult > 1.0:
             log(f"  [London] Session信号+20%: {direction}")
-        else:
-            log(f"  [London] 非London时段信号打7折")
+        # else: 无折扣，不打印
         strength = strength * london_mult
 
         strength = min(strength, 100)
