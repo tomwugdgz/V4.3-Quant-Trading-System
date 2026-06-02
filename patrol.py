@@ -100,7 +100,7 @@ DAILY_LOSS_LIMIT = 50       # 单日亏损上限 $50
 CONSECUTIVE_LOSS_REDUCE = 2 # 连亏2次后仓位减半
 ATR_SL_MULT = {'jpy': 2.0, 'metal': 1.5, 'default': 1.5}  # ATR倍数
 ATR_SL_BUFFER_MULT = 0.5   # 止损缓冲 = ATR × 0.5（动态，非固定5pip）
-TP_SL_RATIO = 1.5           # v5.5 TP:SL = 1:1.5
+TP_SL_RATIO = 1.3           # v5.14 TP:SL = 1:1.3
 
 # ========== Kelly 品种注册表（基于217笔历史统计） ==========
 # W = 历史胜率 | R = 平均赢/平均亏 | kf = Kelly f*
@@ -313,7 +313,7 @@ def get_dynamic_sl_tp(symbol):
         pip_size = point * 10 if digits in (3, 5) else point
         atr_pips = atr / pip_size
         buffer_pips = atr_pips * ATR_SL_BUFFER_MULT
-        sl_pips = max(atr_pips * ATR_SL_MULT['default'] + buffer_pips, 20)
+        sl_pips = max(atr_pips * ATR_SL_MULT['default'] + buffer_pips, 25)
         tp_pips = sl_pips * TP_SL_RATIO
 
     # v5.11: 策略11 - 止损放在Pivot外侧，留出反抽空间
@@ -869,8 +869,8 @@ def execute(symbol, direction, strength):
 
     # Step 6: 盈亏比校验
     rr_ratio = tp_pips / sl_pips if sl_pips > 0 else 0
-    if rr_ratio < 1.5 - 1e-9:
-        log(f"  [过滤] 盈亏比{rr_ratio:.1f}<1.5，空间不足，跳过")
+    if rr_ratio < TP_SL_RATIO - 1e-9:
+        log(f"  [过滤] 盈亏比{rr_ratio:.1f}<{TP_SL_RATIO}，空间不足，跳过")
         return False
 
     min_tp = 50 if is_precious_metal(symbol) else 20
