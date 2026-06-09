@@ -1008,6 +1008,72 @@ def get_daily_pnl():
 
 # ========== 主程序 ==========
 
+def manage_open_positions(info, positions):
+    """v5.15 Active Take Profit - fix profit giveback
+    Rules:
+    1. Profit > $30: force close
+    2. Profit >= $15 and 0.15% balance: trailing stop at 40% drawdown
+    """
+    if not positions:
+        return 0
+    st = load_state()
+    if 'position_peaks' not in st:
+        st['position_peaks'] = {}
+    closed = 0
+    for p in positions:
+        ticket = str(p.ticket)
+        profit = p.profit
+        peak = st['position_peaks'].get(ticket, profit)
+        if profit > peak:
+            peak = profit
+            st['position_peaks'][ticket] = peak
+        if profit > 30:
+            tick = mt5.symbol_info_tick(p.symbol)
+            close_type = mt5.ORDER_TYPE_SELL if p.type == 0 else mt5.ORDER_TYPE_BUY
+            price = tick.bid if p.type == 0 else tick.ask
+            req = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": p.symbol,
+                "volume": p.volume,
+                "type": close_type,
+                "position": p.ticket,
+                "price": price,
+                "magic": 234000,
+                "comment": "v5.15 profit>$30 force close",
+                "type_filling": mt5.ORDER_FILLING_FOK,
+            }
+            result = mt5.order_send(req)
+            if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+                log(f"  [v5.15 ForceClose] {p.symbol} profit=${profit:.2f} > $30, closed")
+                closed += 1
+            continue
+        threshold = max(15, info.balance * 0.0015)
+        if profit >= threshold and peak > 0:
+            dd = (peak - profit) / peak
+            if dd >= 0.40:
+                tick = mt5.symbol_info_tick(p.symbol)
+                close_type = mt5.ORDER_TYPE_SELL if p.type == 0 else mt5.ORDER_TYPE_BUY
+                price = tick.bid if p.type == 0 else tick.ask
+                req = {
+                    "action": mt5.TRADE_ACTION_DEAL,
+                    "symbol": p.symbol,
+                    "volume": p.volume,
+                    "type": close_type,
+                    "position": p.ticket,
+                    "price": price,
+                    "magic": 234000,
+                    "comment": f"v5.15 trailing {dd*100:.0f}% dd",
+                    "type_filling": mt5.ORDER_FILLING_FOK,
+                }
+                result = mt5.order_send(req)
+                if result and result.retcode == mt5.TRADE_RETCODE_DONE:
+                    log(f"  [v5.15 Trailing] {p.symbol} peak=${peak:.2f} dd={dd*100:.0f}%, closed")
+                    closed += 1
+    open_tickets = {str(p.ticket) for p in positions}
+    st['position_peaks'] = {k: v for k, v in st['position_peaks'].items() if k in open_tickets}
+    save_state(st)
+    return closed
+
 def run():
     log("=" * 60)
     log("30min Patrol - v5.11 累积优化版")
@@ -1022,6 +1088,13 @@ def run():
         tick = mt5.symbol_info_tick(p.symbol)
         pdir = "BUY" if p.type == 0 else "SELL"
         log(f"  {p.symbol} {pdir} {p.volume}@{p.price_open:.5f} 浮盈=${p.profit:.2f}")
+
+    # v5.15: 主动止盈检查
+    closed_count = manage_open_positions(info, positions)
+    if closed_count > 0:
+        log(f"[v5.15] 主动平仓 {closed_count} 单，重新扫描")
+        positions = mt5.positions_get() or []
+        log(f"剩余持仓: {len(positions)}/{MAX_POS}")
 
     if len(positions) >= MAX_POS:
         log("持仓已满，跳过")
