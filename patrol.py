@@ -672,6 +672,44 @@ def supertrend_signal(symbol, period=10, multiplier=3.0, tf=mt5.TIMEFRAME_H1):
     
     return signal, round(strength, 1)
 
+def detect_h4_trend(symbol):
+    """v5.17: H4 大时间框架趋势确认
+    返回: ('BUY' | 'SELL' | None, strength 0-100)
+    逻辑:
+    - H4 EMA20 > EMA50 = 上行趋势
+    - H4 EMA20 < EMA50 = 下行趋势
+    - 强度 = EMA 间距 / ATR * 系数
+    """
+    try:
+        h4 = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_H4, 0, 60)
+        if h4 is None or len(h4) < 30:
+            return None, 0
+        df = pd.DataFrame(h4)
+        close = df['close']
+        ema20 = close.ewm(span=20).mean().iloc[-1]
+        ema50 = close.ewm(span=50).mean().iloc[-1]
+        
+        # 计算 ATR(H4) 用于强度归一化
+        hi, lo = df['high'], df['low']
+        tr = np.maximum(hi - lo, np.maximum(abs(hi - close.shift(1)), abs(lo - close.shift(1))))
+        atr = tr.ewm(alpha=1.0/14, adjust=False).mean().iloc[-1]
+        
+        if atr <= 0:
+            return None, 0
+        
+        ema_diff = (ema20 - ema50) / atr  # 标准化间距
+        
+        if ema_diff > 0.3:  # 上行趋势
+            strength = min(ema_diff * 30, 100)
+            return 'BUY', strength
+        elif ema_diff < -0.3:  # 下行趋势
+            strength = min(abs(ema_diff) * 30, 100)
+            return 'SELL', strength
+        else:
+            return None, 0  # 震荡
+    except:
+        return None, 0
+
 def calculate_signal_v3(symbol):
     try:
         d1 = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_D1, 0, 100)
@@ -723,12 +761,23 @@ def calculate_signal_v3(symbol):
         if not np.isfinite(adx) or abs(adx) < 12:
             return None, 0
 
+        # v5.17: H4 大时间框架趋势确认
+        h4_trend_dir, h4_trend_str = detect_h4_trend(symbol)
+        if h4_trend_dir and h4_trend_dir != direction:
+            log(f"  [H4反向] {symbol} D1={direction} vs H4={h4_trend_dir}，跳过")
+            return None, 0
+        if h4_trend_dir == direction:
+            log(f"  [H4确认] {symbol} H4={h4_trend_dir} 强度{h4_trend_str:.0f}%")
+
         score = 0
         if d1_bull: score += 3
         elif d1_bear: score -= 3
         if (h4_rsi < 35 and d1_bull) or (h4_rsi > 65 and d1_bear): score += 2
         elif 35 <= h4_rsi <= 65: score += 1
         if adx > 25: score += 2
+        # v5.17: H4 趋势对齐加分
+        if h4_trend_dir == direction:
+            score += 2
 
         strength = max(0, (abs(score) - 2) / 8 * 1.5) * 100
 
