@@ -108,10 +108,10 @@ TP_SL_RATIO = 1.3           # v5.14 TP:SL = 1:1.3
 KELLY_REGISTRY = {
     # 正 EV 品种（基于真实 MT5 数据 221 笔）
     # === 核心交易品种 ===
-    'USDCAD':  {'W': 0.71, 'R': 0.87, 'kf': 0.388},  # 7笔 +$14.21 EV=0.339
-    'AUDUSD':  {'W': 0.62, 'R': 0.67, 'kf': 0.067},  # 48笔 +$40.61 EV=0.045
-    'USDCHF':  {'W': 0.57, 'R': 0.85, 'kf': 0.057},  # 37笔 +$28.91 EV=0.049
-    'GBPUSD':  {'W': 0.52, 'R': 1.03, 'kf': 0.061},  # 21笔 +$19.98 EV=0.063
+    'USDCAD':  {'W': 0.21, 'R': 0.71, 'kf': 0.01 },  # v5.16: 30天WR21%, 大幅降级,  # 7笔 +$14.21 EV=0.339
+    'AUDUSD':  {'W': 0.22, 'R': 0.67, 'kf': 0.02 },  # v5.16: 30天WR22%, 降级,  # 48笔 +$40.61 EV=0.045
+    'USDCHF':  {'W': 0.22, 'R': 0.67, 'kf': 0.02 },  # v5.16: 30天WR22%, 降级,  # 37笔 +$28.91 EV=0.049
+    'GBPUSD':  {'W': 0.0,  'R': 0.0,  'kf': 0.0},     # v5.16: 12笔0%WR, 强制屏蔽,  # 21笔 +$19.98 EV=0.063
     # === Micro-Test 品种（小单累积数据）===
     'XAUUSD':  {'W': 1.00, 'R': 3.00, 'kf': 0.500},  # 2笔 +$396 Micro-Test 0.05手
     # 永久禁止（负 EV）: EURUSD/NZDUSD/USDJPY/AUDJPY/BTCUSD/AUDCHF
@@ -1106,14 +1106,23 @@ def run():
         mt5.shutdown()
         return
 
-    # v5.5 新增：每日亏损上限检查
-    daily_pnl = get_daily_pnl()
-    if daily_pnl < -DAILY_LOSS_LIMIT:
-        log(f"[日内亏损限制] 今日已亏${daily_pnl:.2f}，超过${DAILY_LOSS_LIMIT}上限，停止交易")
+    # v5.16: 日亏硬顶 - 基于昨日收盘余额快照
+    _st = load_state()
+    prev_close_balance = _st.get('prev_close_balance', info.balance)
+    daily_loss = prev_close_balance - info.balance
+    if daily_loss >= DAILY_LOSS_LIMIT:
+        log(f"[日亏硬顶v5.16] 今日已亏${daily_loss:.2f} >= ${DAILY_LOSS_LIMIT}上限，停止开仓")
+        save_state({**_st, 'prev_close_balance': info.balance})
         mt5.shutdown()
         return
-    elif daily_pnl < 0:
-        log(f"[日内亏损] 今日已亏${daily_pnl:.2f}（上限${DAILY_LOSS_LIMIT}）")
+    elif daily_loss > 0:
+        log(f"[日内亏损] 今日已亏${daily_loss:.2f}（上限${DAILY_LOSS_LIMIT}，基于余额快照）")
+    # 余额快照更新（每日首次巡查时）
+    from datetime import datetime as _dt
+    _today = _dt.now().strftime('%Y-%m-%d')
+    if _st.get('snapshot_date') != _today:
+        save_state({**_st, 'prev_close_balance': info.balance, 'snapshot_date': _today})
+        log(f"[v5.16] 余额快照已更新: ${info.balance:.2f} ({_today})")
 
     log("扫描市场...")
     results = []
