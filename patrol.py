@@ -101,6 +101,7 @@ CONSECUTIVE_LOSS_REDUCE = 2 # 连亏2次后仓位减半
 ATR_SL_MULT = {'jpy': 2.0, 'metal': 1.5, 'default': 1.5}  # ATR倍数
 ATR_SL_BUFFER_MULT = 0.5   # 止损缓冲 = ATR × 0.5（动态，非固定5pip）
 TP_SL_RATIO = 1.3           # v5.14 TP:SL = 1:1.3
+MIN_HOLD_MINUTES = 240     # v5.18: 最短持仓时间(分钟) - 短线(<4h)是亏损元凶
 
 # ========== Kelly 品种注册表（基于217笔历史统计） ==========
 # W = 历史胜率 | R = 平均赢/平均亏 | kf = Kelly f*
@@ -1154,6 +1155,23 @@ def run():
         log(f"[v5频率] 本小时已开{MAX_TRADES_PER_HOUR}单，跳过")
         mt5.shutdown()
         return
+
+    # v5.18: 距上次开仓至少 MIN_HOLD_MINUTES 分钟
+    # 回测发现短线(<4h)交易是亏损元凶, 长线(>4h)胜率47%+
+    _st_cooldown = load_state()
+    last_trade_time = _st_cooldown.get('last_trade', {}).get('time', '')
+    if last_trade_time:
+        try:
+            from datetime import datetime as _dt_cd
+            last_dt = _dt_cd.strptime(last_trade_time, '%Y-%m-%d %H:%M')
+            now_dt = _dt_cd.now()
+            elapsed_min = (now_dt - last_dt).total_seconds() / 60
+            if elapsed_min < MIN_HOLD_MINUTES:
+                log(f"[v5.18冷却期] 距上次交易{elapsed_min:.0f}分钟 < {MIN_HOLD_MINUTES}分钟，跳过")
+                mt5.shutdown()
+                return
+        except Exception:
+            pass
 
     # v5.16: 日亏硬顶 - 基于昨日收盘余额快照
     _st = load_state()
