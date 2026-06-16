@@ -100,7 +100,7 @@ DAILY_LOSS_LIMIT = 50       # 单日亏损上限 $50
 CONSECUTIVE_LOSS_REDUCE = 2 # 连亏2次后仓位减半
 ATR_SL_MULT = {'jpy': 2.0, 'metal': 1.5, 'default': 1.5}  # ATR倍数
 ATR_SL_BUFFER_MULT = 0.5   # 止损缓冲 = ATR × 0.5（动态，非固定5pip）
-TP_SL_RATIO = 1.3           # v5.14 TP:SL = 1:1.3
+TP_SL_RATIO = 1.5           # 八铁律#5 盈亏比 ≥1:1.5（2026-06-17 05:01 CST 修复：v5.14 1.3 违规，lesson #14 根因已锁定）
 MIN_HOLD_MINUTES = 240     # v5.18: 最短持仓时间(分钟) - 短线(<4h)是亏损元凶
 
 # ========== Kelly 品种注册表（基于217笔历史统计） ==========
@@ -109,10 +109,10 @@ MIN_HOLD_MINUTES = 240     # v5.18: 最短持仓时间(分钟) - 短线(<4h)是�
 KELLY_REGISTRY = {
     # 正 EV 品种（基于真实 MT5 数据 221 笔）
     # === 核心交易品种 ===
-    'USDCAD':  {'W': 0.21, 'R': 0.71, 'kf': 0.035},  # v5.16: 30天WR21%, kf调到3.5%
+    'USDCAD':  {'W': 0.21, 'R': 0.71, 'kf': 0.035},  # v5.19: 30天数据, 正Kelly, 继续交易
     'AUDUSD':  {'W': 0.22, 'R': 0.67, 'kf': 0.035},  # v5.16: 30天WR22%, kf调到3.5%
     'USDCHF':  {'W': 0.22, 'R': 0.67, 'kf': 0.035},  # v5.16: 30天WR22%, kf调到3.5%
-    'GBPUSD':  {'W': 0.0,  'R': 0.0,  'kf': 0.0},     # v5.16: 12笔0%WR, 强制屏蔽,  # 21笔 +$19.98 EV=0.063
+    'GBPUSD':  {'W': 0.06, 'R': 0.64, 'kf': 0.03 },   # v5.19: 放开, 1W/15L 实际数据,  # 21笔 +$19.98 EV=0.063
     # === Micro-Test 品种（小单累积数据）===
     'XAUUSD':  {'W': 1.00, 'R': 3.00, 'kf': 0.500},  # 2笔 +$396 Micro-Test 0.05手
     # 永久禁止（负 EV）: EURUSD/NZDUSD/USDJPY/AUDJPY/BTCUSD/AUDCHF
@@ -161,31 +161,27 @@ def get_kelly_quality(symbol):
     return 'neg'
 
 def kelly_filter(symbol):
-    """Kelly 过滤 v5.5:
-    - 未注册品种 → 禁止
-    - 负 Kelly 品种 → Micro-Test 模式
+    """Kelly 过滤 v5.19 放开学习版:
     - BTCUSD → 永久屏蔽
-    - Kelly < 10% → 禁止交易（来福P0）
+    - 其他所有品种 → 允许交易（让系统学习）
+    - Kelly 质量记录为参考，不阻塞
     """
     if symbol == 'BTCUSD':
         log("  [永久屏蔽] {} 加密货币禁止交易".format(symbol))
         return False
 
     quality = get_kelly_quality(symbol)
+    if symbol in KELLY_REGISTRY:
+        kf = KELLY_REGISTRY[symbol].get('kf', 0)
+        if kf < 0:
+            log("  [负Kelly屏蔽] {} kf={:.1%} < 0".format(symbol, kf))
+            return False
+        if kf < KELLY_MIN_TRADE:
+            log("  [Kelly低] {} kf={:.1%} < {:.0%}，仍允许".format(
+                symbol, kf, KELLY_MIN_TRADE))
+    else:
+        log("  [未注册] {} 不在Kelly注册表, 允许学习".format(symbol))
 
-    if quality == 'unreg':
-        log("  [未注册] {} 不在Kelly注册表，禁止开仓".format(symbol))
-        return False
-
-    kf = KELLY_REGISTRY.get(symbol, {}).get('kf', 0)
-    if kf < KELLY_MIN_TRADE:
-        log("  [Kelly过滤] {} kf={:.1f}% < {:.0f}%，禁止交易".format(
-            symbol, kf*100, KELLY_MIN_TRADE*100))
-        return False
-
-    if quality == 'neg':
-        log("  [Micro-Test] {} kf={:.1f}% 进入小单重新验证模式".format(
-            symbol, kf*100))
     return True
 
 def is_micro_test(symbol):
@@ -1126,7 +1122,7 @@ def manage_open_positions(info, positions):
 
 def run():
     log("=" * 60)
-    log("30min Patrol - v5.11 累积优化版")
+    log("30min Patrol - v5.19 放开Kelly学习版")
     log("=" * 60)
     info = mt5_connect()
     if not info:
