@@ -1,24 +1,158 @@
 {
-  "last_update": "2026-06-17 06:58:44.441257",
-  "version": "v1.0",
-  "patrol_runs": [],
+  "last_update": "2026-07-18 19:20:43.560831",
+  "version": "v5.23",
+  "patrol_runs": [
+    {
+      "time": "2026-07-18T11:03:58.518030",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T11:20:37.069748",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T11:20:43.174293",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T11:22:03.685156",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T11:50:43.282081",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T12:20:43.264208",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T12:50:43.231200",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T13:20:43.280714",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T13:50:43.243682",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T14:20:43.295425",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T14:50:43.245069",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T15:20:43.363900",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T15:50:44.649020",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T16:50:43.476431",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T17:20:43.624020",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T17:50:43.547977",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T18:20:43.628761",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T18:50:43.604252",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    },
+    {
+      "time": "2026-07-18T19:20:43.560831",
+      "positions": 3,
+      "balance": 9505.84,
+      "equity": 9513.09,
+      "result": "full_position"
+    }
+  ],
   "consecutive_no_signal": 0,
   "last_trade": {
-    "time": "2026-06-17 06:58",
-    "symbol": "EURJPY",
+    "time": "2026-07-17 20:51",
+    "symbol": "GBPJPY",
     "direction": "BUY",
-    "volume": 0.05,
-    "entry": 186.285,
-    "sl": 185.952,
-    "tp": 186.784,
+    "volume": 0.03,
+    "entry": 218.187,
+    "sl": 217.684,
+    "tp": 218.941,
     "strength": 100.0,
     "kf": 0.0,
-    "ticket": 1710398046,
-    "sl_pips": 33.28571428571436,
-    "tp_pips": 49.928571428571544
+    "ticket": 1814120426,
+    "sl_pips": 50.24999999999987,
+    "tp_pips": 75.3749999999998
   },
   "last_signal": {
-    "symbol": "EURJPY",
+    "symbol": "GBPJPY",
     "direction": "BUY",
     "strength": 100.0,
     "kf": 0.0
@@ -26,7 +160,7 @@
   "daily_pnl": 0.0,
   "daily_loss_limit": 50.0,
   "consecutive_losses": 0,
-  "position_peaks": {},
-  "prev_close_balance": 9589.78,
-  "snapshot_date": "2026-06-17"
+  "prev_close_balance": 9541.33,
+  "snapshot_date": "2026-07-17",
+  "position_peaks": {}
 }
