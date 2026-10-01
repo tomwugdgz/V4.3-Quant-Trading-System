@@ -16,12 +16,10 @@ except (ValueError, AttributeError):
 
 STATE_FILE = os.path.join(os.path.dirname(__file__), 'trade_state.json')
 
-# v5.24 schema - 默认值包含所有字段, 新增字段有 fallback
+# v5.23 schema - 默认值包含所有字段, 新增字段有 fallback
 DEFAULT_STATE = {
-    'last_update': None, 'version': 'v5.24',
+    'last_update': None, 'version': 'v5.23',
     'patrol_runs': [], 'consecutive_no_signal': 0,
-    'consecutive_no_result': 0,   # v5.24: 任何"非开仓"轮次 (含满仓跳过) 都计数
-    'last_no_result_reason': None, # v5.24: 记录为什么没结果 (full_position / no_signal / market_closed)
     'last_trade': None, 'last_signal': None,
     'daily_pnl': 0.0, 'daily_loss_limit': 50.0, 'consecutive_losses': 0,
     'prev_close_balance': None,  # v5.16 字段
@@ -41,8 +39,6 @@ def load_state():
 def save_state(state):
     from datetime import datetime
     state['last_update'] = datetime.now().__str__()
-    # v5.24: 始终保持 schema 版本同步
-    state['version'] = 'v5.24'
     with open(STATE_FILE, 'w') as f:
         json.dump(state, f, ensure_ascii=False, indent=2)
 
@@ -1064,9 +1060,6 @@ def execute(symbol, direction, strength):
             }
             st['last_signal'] = {'symbol': symbol, 'direction': direction, 'strength': float(strength), 'kf': float(kf)}
             st['consecutive_no_signal'] = 0
-            # v5.24: 开仓成功清零 consecutive_no_result
-            st['consecutive_no_result'] = 0
-            st['last_no_result_reason'] = None
             save_state(st)
         except Exception as e:
             log(f"  [状态记录失败] {e}")
@@ -1241,14 +1234,6 @@ def run():
 
     if len(positions) >= MAX_POS:
         log("持仓已满，跳过")
-        # v5.24: 记录 consecutive_no_result (区别于 no_signal)
-        try:
-            st = load_state()
-            st['consecutive_no_result'] = st.get('consecutive_no_result', 0) + 1
-            st['last_no_result_reason'] = 'full_position'
-            save_state(st)
-        except Exception as e:
-            log(f"  [状态记录失败] {e}")
         _record_patrol_run(info, len(positions), 'full_position')
         mt5.shutdown()
         return
@@ -1334,10 +1319,6 @@ def run():
         # v5.23 修复: 更新状态 + 记录巡逻运行
         st = load_state()
         st['consecutive_no_signal'] = st.get('consecutive_no_signal', 0) + 1
-        # v5.24: 同时累计 consecutive_no_result
-        st['consecutive_no_result'] = st.get('consecutive_no_result', 0) + 1
-        st['last_no_result_reason'] = 'no_signal'
-        save_state(st)
         _record_patrol_run(info, len(positions), 'no_signal', signals_found=0)
         log("无达标信号（信号>=35%或XAUUSD>=60%，Kelly正期望）")
         mt5.shutdown()
